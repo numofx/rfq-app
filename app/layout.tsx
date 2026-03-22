@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   description:
     "Protect your business from currency volatility in emerging markets.",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
+    icon: "/site-favicon.ico",
+    shortcut: "/site-favicon.ico",
     apple: [
       {
         sizes: "180x180",
