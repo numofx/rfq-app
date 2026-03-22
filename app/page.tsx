@@ -717,7 +717,10 @@ export default function HomePage() {
                 : "pt-20"
             }
           >
-            <CardWrapper size="auth" className={isPremiumAuthView ? "max-w-[420px]" : "max-w-sm"}>
+            <CardWrapper
+              size="auth"
+              className={isPremiumAuthView ? "max-w-[420px] -translate-y-14 md:-translate-y-20" : "max-w-sm"}
+            >
             {view === "login" ? (
               <>
                 <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
@@ -732,7 +735,7 @@ export default function HomePage() {
                       <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
                         Log in
                       </h1>
-                      <p className="text-sm text-white/70">Institutional hedging for frontier FX.</p>
+                      <p className="text-sm text-white/70">Devaluation insurance for frontier currencies</p>
                     </div>
                   </div>
 
@@ -853,7 +856,7 @@ export default function HomePage() {
                       <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
                         Create account
                       </h1>
-                      <p className="text-sm text-white/70">Institutional hedging for frontier FX.</p>
+                      <p className="text-sm text-white/70">Devaluation insurance for frontier currencies</p>
                     </div>
                   </div>
 
