@@ -24,7 +24,7 @@ interface SpotHistoryPoint {
   spot: number;
 }
 
-interface OptionSidePanelProps {
+interface RFQSidePanelProps {
   mode?: ProductMode;
   pair?: string;
   optionType: OptionType;
@@ -92,7 +92,7 @@ function buildOptionPayoff({
   });
 }
 
-export function OptionSidePanel({
+export function RFQSidePanel({
   mode = "options",
   pair = "USD/NGN",
   optionType,
@@ -104,7 +104,7 @@ export function OptionSidePanel({
   forwardDirection = "buy_usd",
   forwardRate = 1402.18,
   notional = 10_000,
-}: OptionSidePanelProps) {
+}: RFQSidePanelProps) {
   const [activeTab, setActiveTab] = useState<PanelTab>("chart");
   const hasSpot = typeof spot === "number" && Number.isFinite(spot) && spot > 0;
   const safeSpot = hasSpot ? (spot as number) : Math.max(strike || 1, 1);

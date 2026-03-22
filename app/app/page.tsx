@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ForwardInterface } from "@/components/forms/swap";
+import { RFQInterface } from "@/components/forms/rfq-interface";
 import { AppLayout, CardWrapper, ContentLayout } from "@/components/layout/page-shell";
 import { AppBg } from "@/components/ui/app-bg";
 import { SegmentedTabs } from "@/components/ui/rfq-primitives";
@@ -125,7 +125,7 @@ export default function AppPage() {
       <AppLayout headerCenter={headerCenter} headerRight={headerRight} className="bg-transparent text-text">
         <ContentLayout variant="rfq">
           <CardWrapper size="ticket" className="max-w-[980px]">
-            <ForwardInterface mode={mode} />
+            <RFQInterface mode={mode} />
           </CardWrapper>
         </ContentLayout>
       </AppLayout>

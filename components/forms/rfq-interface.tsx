@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Calendar } from "lucide-react";
 import { createPublicClient, http } from "viem";
 import { base, celo } from "viem/chains";
-import { OptionSidePanel } from "@/components/forms/option-side-panel";
+import { RFQSidePanel } from "@/components/forms/rfq-side-panel";
 import { Panel } from "@/components/ui/panel";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import {
@@ -175,11 +175,11 @@ function StatusRail({ state }: { state: RFQState }) {
   );
 }
 
-interface ForwardInterfaceProps {
+interface RFQInterfaceProps {
   mode: ProductMode;
 }
 
-export function ForwardInterface({ mode }: ForwardInterfaceProps) {
+export function RFQInterface({ mode }: RFQInterfaceProps) {
   const [state, setState] = useState<RFQState>("IDLE");
   const [pair, setPair] = useState<Pair>("USD/NGN");
   const [expiryDate, setExpiryDate] = useState(
@@ -944,7 +944,7 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
             </div>
           ) : null}
       </Panel>
-      <OptionSidePanel
+      <RFQSidePanel
         mode={mode}
         pair={pair}
         optionType="call"
