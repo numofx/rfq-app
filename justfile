@@ -1,2 +1,2 @@
 dev:
-	na next dev --port 0 --webpack
+	na next dev --port 0

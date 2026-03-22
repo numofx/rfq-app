@@ -34,11 +34,7 @@ interface OptionSidePanelProps {
   premiumUSDC?: number;
   spotHistory?: SpotHistoryPoint[];
   forwardDirection?: ForwardDirection;
-  tenorLabel?: string;
   forwardRate?: number;
-  forwardPoints?: number;
-  hedgeCostPct?: number;
-  settlementAmount?: number;
   notional?: number;
 }
 
@@ -48,6 +44,13 @@ function formatWhole(value: number) {
 
 function formatTwo(value: number) {
   return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatExpiry(daysToExpiry: number | null) {
+  if (typeof daysToExpiry !== "number" || !Number.isFinite(daysToExpiry)) return "—";
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + daysToExpiry);
+  return expiry.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }
 
 function buildDefaultHistory(spot: number, days = 90): SpotHistoryPoint[] {
@@ -99,11 +102,7 @@ export function OptionSidePanel({
   premiumUSDC,
   spotHistory,
   forwardDirection = "buy_usd",
-  tenorLabel = "30 Days",
   forwardRate = 1402.18,
-  forwardPoints = 16.14,
-  hedgeCostPct = 1.16,
-  settlementAmount = 14_021_800,
   notional = 10_000,
 }: OptionSidePanelProps) {
   const [activeTab, setActiveTab] = useState<PanelTab>("chart");
@@ -129,48 +128,57 @@ export function OptionSidePanel({
   );
 
   const forwardPayoffData = useMemo(() => {
-    const floor = Math.max(1, forwardRate - 180);
-    const ceil = forwardRate + 180;
+    const protectionRate = strike > 0 ? strike : forwardRate;
+    const floor = Math.max(1, protectionRate - 220);
+    const ceil = protectionRate + 220;
     const steps = 55;
+    const coverageUnits = protectionRate > 0 ? notional / protectionRate : 0;
     return Array.from({ length: steps }, (_, idx) => {
       const spotAtExpiry = floor + ((ceil - floor) * idx) / (steps - 1);
-      const pnl = (forwardDirection === "buy_usd" ? spotAtExpiry - forwardRate : forwardRate - spotAtExpiry) * notional;
-      return { spotAtExpiry, pnl };
+      const payout =
+        forwardDirection === "buy_usd"
+          ? Math.max(spotAtExpiry - protectionRate, 0) * coverageUnits
+          : Math.max(protectionRate - spotAtExpiry, 0) * coverageUnits;
+      return { spotAtExpiry, payout };
     });
-  }, [forwardDirection, forwardRate, notional]);
+  }, [forwardDirection, forwardRate, notional, strike]);
 
   if (isForwardMode) {
+    const protectionRate = strike > 0 ? strike : forwardRate;
+    const expiryLabel = formatExpiry(daysToExpiry);
+    const protectionCost =
+      typeof premiumUSDC === "number" && Number.isFinite(premiumUSDC) && premiumUSDC > 0
+        ? `$${premiumUSDC.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+        : "—";
+
     return (
       <Panel className="space-y-4 p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-[15px] font-semibold text-text">Protect against Devaluation</h3>
+        <section className="grid grid-cols-2 gap-1">
+          <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
+            <div className="text-[10px] font-semibold text-muted">Current rate</div>
+            <div className="mt-0.5 text-[14px] font-semibold text-text">{formatWhole(safeSpot)}</div>
           </div>
-          <span className="inline-flex rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.04em] text-cyan-200">
-            PHYSICAL DELIVERY
-          </span>
-        </div>
-
-        <section className="space-y-4">
-          <div className="grid grid-cols-2 gap-1">
-            <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
-              <div className="text-[10px] font-semibold text-muted">Spot (NGN per USD)</div>
-              <div className="mt-0.5 text-[14px] font-semibold text-text">{formatTwo(safeSpot)}</div>
-            </div>
-            <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
-              <div className="text-[10px] font-semibold text-muted">Forward Rate</div>
-              <div className="mt-0.5 text-[14px] font-semibold text-text">{formatTwo(forwardRate)}</div>
-            </div>
-            <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
-              <div className="text-[10px] font-semibold text-muted">Forward Points</div>
-              <div className="mt-0.5 text-[14px] font-semibold text-text">+{formatTwo(forwardPoints)}</div>
-            </div>
-            <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
-              <div className="text-[10px] font-semibold text-muted">Settlement Amount</div>
-              <div className="mt-0.5 text-[14px] font-semibold text-text">₦{formatWhole(settlementAmount)}</div>
-            </div>
+          <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
+            <div className="text-[10px] font-semibold text-muted">Protection rate</div>
+            <div className="mt-0.5 text-[14px] font-semibold text-text">{formatWhole(protectionRate)}</div>
+          </div>
+          <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
+            <div className="text-[10px] font-semibold text-muted">Expiry</div>
+            <div className="mt-0.5 text-[14px] font-semibold text-text">{expiryLabel}</div>
+          </div>
+          <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
+            <div className="text-[10px] font-semibold text-muted">Cost of protection</div>
+            <div className="mt-0.5 text-[14px] font-semibold text-text">{protectionCost}</div>
           </div>
         </section>
+
+        <p className="rounded-[12px] border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-[15px] font-semibold text-cyan-100">
+          Protected above {formatWhole(protectionRate)} NGN/USD
+        </p>
+
+        <p className="text-[12px] leading-[1.4] text-muted">
+          You’re protected if NGN weakens beyond {formatWhole(protectionRate)}.
+        </p>
 
         <div className="h-[260px] rounded-[12px] border border-border/70 bg-transparent px-2 py-2">
           <ResponsiveContainer width="100%" height="100%">
@@ -201,15 +209,15 @@ export function OptionSidePanel({
                   color: "hsl(var(--text))",
                 }}
                 labelFormatter={(value) => `USD/NGN @ Expiry ${formatTwo(Number(value))}`}
-                formatter={(value: number) => [`${formatWhole(value)} USD`, "PnL"]}
+                formatter={(value: number) => [`${formatWhole(value)}`, "Payout"]}
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
               <ReferenceLine
-                x={forwardRate}
+                x={protectionRate}
                 stroke="hsl(var(--brand))"
                 strokeDasharray="3 3"
                 label={{
-                  value: "Locked Forward Rate",
+                  value: "Protection starts here",
                   position: "insideTopRight",
                   fill: "hsl(var(--muted))",
                   fontSize: 10,
@@ -217,7 +225,7 @@ export function OptionSidePanel({
               />
               <Line
                 type="monotone"
-                dataKey="pnl"
+                dataKey="payout"
                 stroke="hsl(var(--brand))"
                 strokeWidth={2}
                 dot={false}

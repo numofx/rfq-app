@@ -12,7 +12,6 @@ import {
   DropdownSelect,
   FieldLabel,
   HelperText,
-  SegmentedControl,
 } from "@/components/ui/rfq-primitives";
 import { TextField } from "@/components/ui/text-field";
 
@@ -28,8 +27,6 @@ type RFQState =
 
 type Pair = "USD/NGN" | "USD/KES";
 type ProductMode = "futures" | "options";
-type OptionType = "call" | "put";
-type ForwardDirection = "buy_usd" | "sell_usd";
 type SpotHistoryPoint = { t: number; spot: number };
 
 interface Quote {
@@ -42,7 +39,6 @@ interface Quote {
 
 const QUOTE_WINDOW_SECONDS = 30;
 const REQUEST_DELAY_MS = 1400;
-const ATM_THRESHOLD = 0.0025;
 const MAX_SPOT_HISTORY_POINTS = 240;
 const MIN_DUPLICATE_SAMPLE_GAP_MS = 5_000;
 const CHAINLINK_NGN_USD_FEED_BASE = "0xdfbb5Cbc88E382de007bfe6CE99C388176ED80aD";
@@ -86,10 +82,6 @@ const pairs = [
   { id: "usd-kes", label: "USD/KES" },
 ] as const;
 
-const optionOptions: ReadonlyArray<{ value: OptionType; label: string }> = [
-  { value: "call", label: "Call" },
-  { value: "put", label: "Put" },
-] as const;
 const forwardPointsByTenor: Record<"7D" | "30D" | "90D" | "180D" | "365D", number> = {
   "7D": 3.82,
   "30D": 16.14,
@@ -97,14 +89,6 @@ const forwardPointsByTenor: Record<"7D" | "30D" | "90D" | "180D" | "365D", numbe
   "180D": 89.25,
   "365D": 177.43,
 };
-const hedgeCostByTenor: Record<"7D" | "30D" | "90D" | "180D" | "365D", number> = {
-  "7D": 0.42,
-  "30D": 1.16,
-  "90D": 2.08,
-  "180D": 2.95,
-  "365D": 4.12,
-};
-
 const makers = ["Maker A", "Maker B", "Maker C", "Maker D"] as const;
 
 function PairFlag({ src, alt }: { src: string; alt: string }) {
@@ -198,8 +182,6 @@ interface ForwardInterfaceProps {
 export function ForwardInterface({ mode }: ForwardInterfaceProps) {
   const [state, setState] = useState<RFQState>("IDLE");
   const [pair, setPair] = useState<Pair>("USD/NGN");
-  const [optionType, setOptionType] = useState<OptionType>("call");
-  const [forwardDirection, setForwardDirection] = useState<ForwardDirection>("buy_usd");
   const [expiryDate, setExpiryDate] = useState(
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
@@ -282,23 +264,7 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
   }, [expiryCountdownDays]);
   const forwardPoints = forwardPointsByTenor[forwardTenorBucket];
   const forwardRate = forwardSpot + forwardPoints;
-  const hedgeCostPct = hedgeCostByTenor[forwardTenorBucket];
-  const settlementAmount = parsedNotional * forwardRate;
-  const forwardTenorLabel = `${typeof expiryCountdownDays === "number" ? expiryCountdownDays : 30} Days`;
   const displaySpot = mode === "futures" ? forwardSpot : hasValidSpot ? spot : null;
-  const moneyness = useMemo(() => {
-    if (mode !== "options") return "—";
-    if (!hasValidSpot || !parsedStrike) return "—";
-    const ratio = parsedStrike / spot - 1;
-    const absRatio = Math.abs(ratio);
-    if (absRatio < ATM_THRESHOLD) return "ATM";
-    const pct = `${(absRatio * 100).toFixed(2)}%`;
-    if (optionType === "call") {
-      return `${pct} ${parsedStrike > spot ? "OTM" : "ITM"}`;
-    }
-    return `${pct} ${parsedStrike < spot ? "OTM" : "ITM"}`;
-  }, [hasValidSpot, mode, optionType, parsedStrike, spot]);
-
   useEffect(() => {
     setSpotHistory([]);
   }, [pair]);
@@ -334,14 +300,11 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
   const expired = (state === "QUOTES_LIVE" || state === "QUOTE_SELECTED") && windowRemaining <= 0;
 
   const indicativePremium = useMemo(() => {
-    if (mode !== "options") return 0;
     if (!parsedNotional || !parsedStrike) return 0;
     const contracts = parsedNotional / parsedStrike;
     return Number((contracts * 1.82).toFixed(2));
-  }, [mode, parsedNotional, parsedStrike]);
-  const hasRequestedQuotes = state !== "IDLE";
-  const showIndicativePremium =
-    mode === "options" && hasRequestedQuotes && parsedNotional > 0 && parsedStrike > 0;
+  }, [parsedNotional, parsedStrike]);
+  const showIndicativePremium = parsedNotional > 0 && parsedStrike > 0;
   const panelPremium = showIndicativePremium ? indicativePremium : undefined;
 
   useEffect(() => {
@@ -502,8 +465,6 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
   const clearForm = () => {
     setState("IDLE");
     setPair("USD/NGN");
-    setOptionType("call");
-    setForwardDirection("buy_usd");
     const resetExpiry = toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
     setExpiryDate(resetExpiry);
     setCalendarMonth(parseIsoDate(resetExpiry));
@@ -559,6 +520,11 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
         <section className="space-y-1">
           {mode === "futures" ? (
             <>
+              <div className="space-y-1 pb-2">
+                <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text">Protect against Devaluation</h2>
+                <p className="text-[12px] text-muted">Set worst case FX rate</p>
+              </div>
+
               <div>
                 <FieldLabel htmlFor="pair">Pair</FieldLabel>
                 <DropdownSelect
@@ -571,6 +537,40 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                   <span className="text-text">{forwardSpot.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>{" "}
                   NGN per USD
                 </HelperText>
+              </div>
+
+              <div>
+                <FieldLabel htmlFor="notional">Exposure</FieldLabel>
+                <div className="relative">
+                  <TextField
+                    id="notional"
+                    value={notional}
+                    onChange={(event) => setNotional(event.target.value)}
+                    placeholder="10,000"
+                    className="px-8 pr-14"
+                  />
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted">
+                    USD
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel htmlFor="strike">Protection rate</FieldLabel>
+                <div className="relative">
+                  <TextField
+                    id="strike"
+                    value={strike}
+                    onChange={(event) => setStrike(event.target.value)}
+                    placeholder="1,402.00"
+                    className="pr-28"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 whitespace-nowrap text-[9px] leading-none font-semibold text-muted">
+                    NGN per USD
+                  </span>
+                </div>
+                <HelperText className="mt-1 text-[11px]">Choose the rate where protection begins</HelperText>
               </div>
 
               <div>
@@ -675,42 +675,8 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                 </HelperText>
               </div>
 
-              <div>
-                <FieldLabel htmlFor="notional">Notional</FieldLabel>
-                <div className="relative">
-                  <TextField
-                    id="notional"
-                    value={notional}
-                    onChange={(event) => setNotional(event.target.value)}
-                    placeholder="10,000"
-                    className="px-8 pr-14"
-                  />
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted">
-                    USD
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-panel-2/50 px-3 py-2 text-[11px] text-muted">
-                <div className="flex items-center justify-between">
-                  <span>Indicative forward rate</span>
-                  <span>Indicative</span>
-                </div>
-                <div className="mt-1 text-[16px] font-semibold text-text">
-                  {state === "IDLE" ? "—" : `${forwardRate.toLocaleString("en-US", { maximumFractionDigits: 2 })} NGN/USD`}
-                </div>
-                <div className="mt-1">
-                  {state === "REQUESTING"
-                    ? "Requesting prices..."
-                    : state === "IDLE"
-                      ? "Awaiting quote"
-                      : `Forward points +${forwardPoints.toFixed(2)} (${hedgeCostPct.toFixed(2)}%)`}
-                </div>
-              </div>
-
               <PrimaryButton type="button" onClick={requestQuotes}>
-                Request Quotes
+                Request protection quote
               </PrimaryButton>
               <HelperText className="text-[11px]">Quotes valid for 30s after response.</HelperText>
 
@@ -738,29 +704,6 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                   </span>{" "}
                   {quoteCurrency} per {baseCurrency}
                 </HelperText>
-              </div>
-
-              <div>
-                <FieldLabel>Option Type</FieldLabel>
-                <div className="grid grid-cols-2 gap-1 rounded-xl border border-border/70 bg-panel-2/60 p-1">
-                  {optionOptions.map((option) => {
-                    const isActive = option.value === optionType;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setOptionType(option.value)}
-                        className={
-                          isActive
-                            ? "h-7 rounded-lg bg-white text-sm font-medium text-black"
-                            : "h-7 rounded-lg text-sm font-medium text-muted"
-                        }
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -867,7 +810,7 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                 </div>
 
                 <div>
-                  <FieldLabel htmlFor="strike">Strike</FieldLabel>
+                  <FieldLabel htmlFor="strike">Protection rate</FieldLabel>
                   <div className="relative">
                     <TextField
                       id="strike"
@@ -880,12 +823,12 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                       {quoteCurrency} per {baseCurrency}
                     </span>
                   </div>
-                  <HelperText className="mt-1 text-[11px]">{moneyness}</HelperText>
+                  <HelperText className="mt-1 text-[11px]">Choose the rate where protection begins</HelperText>
                 </div>
               </div>
 
               <div>
-                <FieldLabel htmlFor="notional">Notional</FieldLabel>
+                <FieldLabel htmlFor="notional">Exposure</FieldLabel>
                 <div className="relative">
                   <TextField
                     id="notional"
@@ -903,7 +846,7 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
 
               <div className="rounded-xl border border-border/70 bg-panel-2/50 px-3 py-2 text-[11px] text-muted">
                 <div className="flex items-center justify-between">
-                  <span>Indicative all-in premium</span>
+                  <span>Cost of protection</span>
                   <span>Indicative</span>
                 </div>
                 <div className="mt-1 text-[16px] font-semibold text-text">
@@ -913,13 +856,13 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                   {state === "REQUESTING"
                     ? "Requesting quotes..."
                     : showIndicativePremium
-                      ? `${((indicativePremium / parsedNotional) * 100).toFixed(3)}% of notional (${baseCurrency})`
-                      : "Awaiting quote"}
+                      ? `${((indicativePremium / parsedNotional) * 100).toFixed(3)}% of exposure (${baseCurrency})`
+                      : "Enter exposure and protection rate"}
                 </div>
               </div>
 
               <PrimaryButton type="button" onClick={requestQuotes}>
-                Request Quotes
+                Request protection quote
               </PrimaryButton>
               <HelperText className="text-[11px]">Quotes valid for 30s after response.</HelperText>
             </>
@@ -943,38 +886,26 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
               <div className="grid grid-cols-2 gap-y-1 text-[12px]">
                 <span className="text-muted">Type</span>
                 <span className="text-right text-text">
-                  {mode === "options" ? optionType.toUpperCase() : "FORWARDS"}
+                  {mode === "options" ? "PROTECTION" : "PROTECTION"}
                 </span>
                 <span className="text-muted">Pair</span>
                 <span className="text-right text-text">{pair}</span>
-                {mode === "futures" ? (
-                  <>
-                    <span className="text-muted">Direction</span>
-                    <span className="text-right text-text">
-                      {forwardDirection === "buy_usd" ? "BUY USD FORWARD" : "SELL USD FORWARD"}
-                    </span>
-                  </>
-                ) : null}
-                <span className="text-muted">Notional ({baseCurrency})</span>
+                <span className="text-muted">Exposure ({baseCurrency})</span>
                 <span className="text-right text-text">{toMoney(parsedNotional)}</span>
-                <span className="text-muted">{mode === "futures" ? "Tenor" : "Expiry"}</span>
-                <span className="text-right text-text">{mode === "futures" ? forwardTenorLabel : displayExpiry}</span>
-                {mode === "options" ? (
-                  <>
-                    <span className="text-muted">Strike</span>
-                    <span className="text-right text-text">{strike || "-"}</span>
-                  </>
-                ) : null}
+                <span className="text-muted">Expiry</span>
+                <span className="text-right text-text">{displayExpiry}</span>
+                <span className="text-muted">Protection rate</span>
+                <span className="text-right text-text">{strike || "-"}</span>
                 {mode === "futures" ? (
                   <>
-                    <span className="text-muted">Forward Rate</span>
-                    <span className="text-right text-text">{forwardRate.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                    <span className="text-muted">Settlement Amount</span>
-                    <span className="text-right text-text">₦{settlementAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                    <span className="text-muted">Cost of protection</span>
+                    <span className="text-right text-text">
+                      {selectedQuote ? toMoney(selectedQuote.premium) : "—"}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-muted">Premium</span>
+                    <span className="text-muted">Cost of protection</span>
                     <span className="text-right text-text">{toMoney(selectedQuote.premium)}</span>
                     <span className="text-muted">Fees</span>
                     <span className="text-right text-text">{toMoney(selectedQuote.fees)}</span>
@@ -1016,28 +947,23 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
       <OptionSidePanel
         mode={mode}
         pair={pair}
-        optionType={optionType}
+        optionType="call"
         spot={displaySpot}
         strike={parsedStrike}
         daysToExpiry={expiryCountdownDays}
         premiumUSDC={panelPremium}
         spotHistory={spotHistory}
-        forwardDirection={forwardDirection}
-        tenorLabel={forwardTenorLabel}
         forwardRate={forwardRate}
-        forwardPoints={forwardPoints}
-        hedgeCostPct={hedgeCostPct}
-        settlementAmount={settlementAmount}
         notional={parsedNotional}
       />
       </div>
 
       {isQuotePopupOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
           <div className="w-full max-w-[360px] rounded-2xl border border-border/70 bg-panel p-4 shadow-panel backdrop-blur-panel">
             <div className="flex items-center justify-between">
               <div className="text-[12px] font-semibold text-muted">
-                {mode === "futures" ? "Forward Prices" : "Quotes"}
+                {mode === "futures" ? "Protection Quotes" : "Quotes"}
               </div>
               <button
                 type="button"
@@ -1077,7 +1003,7 @@ export function ForwardInterface({ mode }: ForwardInterfaceProps) {
                     disabled={expired || state === "SIGNING" || state === "PENDING" || state === "DONE"}
                     className="mt-2 h-8 w-full rounded-lg border border-border/70 px-3 text-[12px] font-semibold text-text disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {mode === "futures" ? "Select Price" : "Accept"}
+                    {mode === "futures" ? "Select Protection" : "Accept"}
                   </button>
                 </div>
               ))}
