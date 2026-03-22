@@ -676,9 +676,11 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
               </div>
 
               <PrimaryButton type="button" onClick={requestQuotes}>
-                {`Protect above ${
-                  parsedStrike > 0 ? Math.round(parsedStrike).toLocaleString("en-US") : "XXXX"
-                }`}
+                <span className="text-[15px] sm:text-[16px]">
+                  {`Protect above ${
+                    parsedStrike > 0 ? Math.round(parsedStrike).toLocaleString("en-US") : "XXXX"
+                  }`}
+                </span>
               </PrimaryButton>
               <HelperText className="text-[11px]">Quotes valid for 30s after response.</HelperText>
 
