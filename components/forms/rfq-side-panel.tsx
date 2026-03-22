@@ -172,17 +172,13 @@ export function RFQSidePanel({
           </div>
         </section>
 
-        <p className="rounded-[12px] border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-[15px] font-semibold text-cyan-100">
-          Protected above {formatWhole(protectionRate)} NGN/USD
-        </p>
-
         <p className="text-[12px] leading-[1.4] text-muted">
           You’re protected if NGN weakens beyond {formatWhole(protectionRate)}.
         </p>
 
-        <div className="h-[260px] rounded-[12px] border border-border/70 bg-transparent px-2 py-2">
+        <div className="h-[340px] rounded-[12px] border border-border/70 bg-transparent px-0 py-0">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={forwardPayoffData} margin={{ top: 12, right: 12, left: 0, bottom: 6 }}>
+            <LineChart data={forwardPayoffData} margin={{ top: 6, right: 2, left: -14, bottom: 0 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
               <XAxis
                 dataKey="spotAtExpiry"
