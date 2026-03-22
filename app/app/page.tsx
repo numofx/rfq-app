@@ -113,8 +113,8 @@ export default function AppPage() {
         value={mode}
         onChange={setMode}
         options={[
-          { label: "Forwards", value: "futures" },
-          { label: "Options", value: "options" },
+          { label: "Hedge", value: "futures" },
+          { label: "Advanced", value: "options" },
         ]}
       />
     </div>

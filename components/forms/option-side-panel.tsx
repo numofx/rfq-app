@@ -89,21 +89,6 @@ function buildOptionPayoff({
   });
 }
 
-function buildForwardCurve(baseSpot: number) {
-  const points = [
-    { tenor: "7D", points: 3.82 },
-    { tenor: "30D", points: 16.14 },
-    { tenor: "90D", points: 44.62 },
-    { tenor: "180D", points: 89.25 },
-    { tenor: "365D", points: 177.43 },
-  ];
-
-  return points.map((item) => ({
-    tenor: item.tenor,
-    forwardRate: baseSpot + item.points,
-  }));
-}
-
 export function OptionSidePanel({
   mode = "options",
   pair = "USD/NGN",
@@ -143,10 +128,6 @@ export function OptionSidePanel({
     [optionType, strike, premiumUSDC, safeSpot]
   );
 
-  const forwardCurveData = useMemo(() => buildForwardCurve(safeSpot || 1386.04), [safeSpot]);
-  const forwardCurveMin = Math.min(...forwardCurveData.map((d) => d.forwardRate));
-  const forwardCurveMax = Math.max(...forwardCurveData.map((d) => d.forwardRate));
-
   const forwardPayoffData = useMemo(() => {
     const floor = Math.max(1, forwardRate - 180);
     const ceil = forwardRate + 180;
@@ -163,7 +144,7 @@ export function OptionSidePanel({
       <Panel className="space-y-4 p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-[15px] font-semibold text-text">USD/NGN Forward</h3>
+            <h3 className="text-[15px] font-semibold text-text">Protect against Devaluation</h3>
           </div>
           <span className="inline-flex rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.04em] text-cyan-200">
             PHYSICAL DELIVERY
@@ -193,118 +174,58 @@ export function OptionSidePanel({
 
         <div className="h-[260px] rounded-[12px] border border-border/70 bg-transparent px-2 py-2">
           <ResponsiveContainer width="100%" height="100%">
-            {activeTab === "chart" ? (
-              <LineChart data={forwardCurveData} margin={{ top: 12, right: 12, left: 0, bottom: 6 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis
-                  dataKey="tenor"
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
-                  tickFormatter={(value: number) => formatWhole(value)}
-                  domain={[forwardCurveMin - 20, forwardCurveMax + 20]}
-                  width={56}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 10,
-                    border: "1px solid hsl(var(--border) / 0.7)",
-                    backgroundColor: "hsl(var(--panel))",
-                    fontSize: 11,
-                    color: "hsl(var(--text))",
-                  }}
-                  formatter={(value: number) => [`${formatTwo(value)} NGN/USD`, "Forward Rate"]}
-                />
-                <ReferenceLine
-                  x={tenorLabel.replace(" Days", "D")}
-                  stroke="hsl(var(--brand))"
-                  strokeDasharray="3 3"
-                  label={{
-                    value: "Selected",
-                    position: "insideTopRight",
-                    fill: "hsl(var(--muted))",
-                    fontSize: 10,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="forwardRate"
-                  stroke="hsl(var(--brand))"
-                  strokeWidth={2.2}
-                  dot={{ r: 3, fill: "hsl(var(--brand))" }}
-                  activeDot={{ r: 4, fill: "hsl(var(--brand))" }}
-                />
-              </LineChart>
-            ) : (
-              <LineChart data={forwardPayoffData} margin={{ top: 12, right: 12, left: 0, bottom: 6 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis
-                  dataKey="spotAtExpiry"
-                  type="number"
-                  domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
-                  tickFormatter={(value: number) => formatWhole(value)}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
-                  tickFormatter={(value: number) => formatWhole(value)}
-                  width={56}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 10,
-                    border: "1px solid hsl(var(--border) / 0.7)",
-                    backgroundColor: "hsl(var(--panel))",
-                    fontSize: 11,
-                    color: "hsl(var(--text))",
-                  }}
-                  labelFormatter={(value) => `USD/NGN @ Expiry ${formatTwo(Number(value))}`}
-                  formatter={(value: number) => [`${formatWhole(value)} USD`, "PnL"]}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
-                <ReferenceLine
-                  x={forwardRate}
-                  stroke="hsl(var(--brand))"
-                  strokeDasharray="3 3"
-                  label={{
-                    value: "Locked Forward Rate",
-                    position: "insideTopRight",
-                    fill: "hsl(var(--muted))",
-                    fontSize: 10,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pnl"
-                  stroke="hsl(var(--brand))"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 3, fill: "hsl(var(--brand))" }}
-                />
-              </LineChart>
-            )}
+            <LineChart data={forwardPayoffData} margin={{ top: 12, right: 12, left: 0, bottom: 6 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+              <XAxis
+                dataKey="spotAtExpiry"
+                type="number"
+                domain={["dataMin", "dataMax"]}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
+                tickFormatter={(value: number) => formatWhole(value)}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "hsl(var(--muted))" }}
+                tickFormatter={(value: number) => formatWhole(value)}
+                width={56}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 10,
+                  border: "1px solid hsl(var(--border) / 0.7)",
+                  backgroundColor: "hsl(var(--panel))",
+                  fontSize: 11,
+                  color: "hsl(var(--text))",
+                }}
+                labelFormatter={(value) => `USD/NGN @ Expiry ${formatTwo(Number(value))}`}
+                formatter={(value: number) => [`${formatWhole(value)} USD`, "PnL"]}
+              />
+              <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
+              <ReferenceLine
+                x={forwardRate}
+                stroke="hsl(var(--brand))"
+                strokeDasharray="3 3"
+                label={{
+                  value: "Locked Forward Rate",
+                  position: "insideTopRight",
+                  fill: "hsl(var(--muted))",
+                  fontSize: 10,
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="pnl"
+                stroke="hsl(var(--brand))"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 3, fill: "hsl(var(--brand))" }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
-
-        <SegmentedControl
-          value={activeTab}
-          onChange={setActiveTab}
-          options={[
-            { value: "chart", label: "Forward Curve" },
-            { value: "payoff", label: "Payoff" },
-          ]}
-          className="grid-cols-2"
-          optionClassName="h-6 text-[12px]"
-        />
       </Panel>
     );
   }
