@@ -250,13 +250,6 @@ export function RFQSidePanel({
 
   return (
     <Panel className="space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold text-text">{pair} {optionType === "call" ? "Call" : "Put"}</h3>
-        <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.04em] text-cyan-200">
-          PHYSICAL DELIVERY
-        </span>
-      </div>
-
       <div className="grid grid-cols-2 gap-1">
         <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
           <div className="text-[10px] font-semibold text-muted">Spot (NGN per USD)</div>
