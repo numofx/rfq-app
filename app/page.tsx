@@ -62,6 +62,34 @@ const checkEmailExists = async (email: string) => {
   return Boolean(payload.exists);
 };
 
+const getDevAuthDiagnostic = (error: unknown) => {
+  if (process.env.NODE_ENV === "production") {
+    return "";
+  }
+
+  if (!error || typeof error !== "object") {
+    return String(error);
+  }
+
+  const details = error as {
+    name?: string;
+    message?: string;
+    code?: string;
+    status?: number;
+    __isAuthError?: boolean;
+  };
+
+  return [
+    details.name ? `name=${details.name}` : null,
+    details.code ? `code=${details.code}` : null,
+    typeof details.status === "number" ? `status=${details.status}` : null,
+    details.__isAuthError ? "__isAuthError=true" : null,
+    details.message ? `message=${details.message}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+};
+
 export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +112,7 @@ export default function HomePage() {
   const [loginErrorField, setLoginErrorField] = useState<LoginErrorField>(null);
   const [loginErrorMessage, setLoginErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [authDebugInfo, setAuthDebugInfo] = useState("");
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [accountName, setAccountName] = useState("");
@@ -148,6 +177,7 @@ export default function HomePage() {
     if (isAuthBusy) return;
     setAuthError("");
     setStatusMessage("");
+    setAuthDebugInfo("");
     if (!signupEmail.trim()) {
       setAuthError("Please enter your email address.");
       return;
@@ -173,6 +203,7 @@ export default function HomePage() {
   const handleForgotPassword = async () => {
     setAuthError("");
     setStatusMessage("");
+    setAuthDebugInfo("");
     if (!supabase) {
       setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
@@ -189,6 +220,7 @@ export default function HomePage() {
       });
       if (error) {
         setAuthError(getReadableAuthError(error.message));
+        setAuthDebugInfo(getDevAuthDiagnostic(error));
         if (process.env.NODE_ENV !== "production") {
           console.error("Supabase resetPasswordForEmail error:", error);
         }
@@ -197,6 +229,7 @@ export default function HomePage() {
       setStatusMessage("Password reset email sent. Check your inbox.");
     } catch (error) {
       setAuthError("Unexpected error while sending the reset email. Please try again.");
+      setAuthDebugInfo(getDevAuthDiagnostic(error));
       if (process.env.NODE_ENV !== "production") {
         console.error("Unexpected resetPasswordForEmail failure:", error);
       }
@@ -211,6 +244,7 @@ export default function HomePage() {
     setLoginErrorField(null);
     setLoginErrorMessage("");
     setStatusMessage("");
+    setAuthDebugInfo("");
     if (!supabase) {
       setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
@@ -235,6 +269,7 @@ export default function HomePage() {
       });
 
       if (error) {
+        setAuthDebugInfo(getDevAuthDiagnostic(error));
         const code = (error.code ?? "").toLowerCase();
         const message = error.message.toLowerCase();
         const isInvalidEmail =
@@ -281,6 +316,7 @@ export default function HomePage() {
     } catch (error) {
       setLoginErrorField("password");
       setLoginErrorMessage("Invalid password");
+      setAuthDebugInfo(getDevAuthDiagnostic(error));
       if (process.env.NODE_ENV !== "production") {
         console.error("Unexpected signIn failure:", error);
       }
@@ -293,6 +329,7 @@ export default function HomePage() {
     event.preventDefault();
     setAuthError("");
     setStatusMessage("");
+    setAuthDebugInfo("");
     if (!supabase) {
       setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
@@ -323,6 +360,7 @@ export default function HomePage() {
 
       if (error) {
         setAuthError(getReadableAuthError(error.message));
+        setAuthDebugInfo(getDevAuthDiagnostic(error));
         if (process.env.NODE_ENV !== "production") {
           console.error("Supabase signUp error:", error);
         }
@@ -332,6 +370,7 @@ export default function HomePage() {
       setView("verify");
     } catch (error) {
       setAuthError("Unexpected error while creating your account. Please try again.");
+      setAuthDebugInfo(getDevAuthDiagnostic(error));
       if (process.env.NODE_ENV !== "production") {
         console.error("Unexpected signUp failure:", error);
       }
@@ -342,6 +381,7 @@ export default function HomePage() {
 
   const handleVerificationContinue = async () => {
     setAuthError("");
+    setAuthDebugInfo("");
     if (!supabase) {
       setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
@@ -357,6 +397,7 @@ export default function HomePage() {
   const handleResendVerification = async () => {
     setAuthError("");
     setStatusMessage("");
+    setAuthDebugInfo("");
     if (!supabase) {
       setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
@@ -372,6 +413,7 @@ export default function HomePage() {
       });
       if (error) {
         setAuthError(getReadableAuthError(error.message));
+        setAuthDebugInfo(getDevAuthDiagnostic(error));
         if (process.env.NODE_ENV !== "production") {
           console.error("Supabase resend error:", error);
         }
@@ -380,6 +422,7 @@ export default function HomePage() {
       setStatusMessage("Verification email sent.");
     } catch (error) {
       setAuthError("Unexpected error while resending verification email. Please try again.");
+      setAuthDebugInfo(getDevAuthDiagnostic(error));
       if (process.env.NODE_ENV !== "production") {
         console.error("Unexpected resend failure:", error);
       }
@@ -753,6 +796,7 @@ export default function HomePage() {
                           setLoginEmail(event.target.value);
                           setLoginErrorField(null);
                           setLoginErrorMessage("");
+                          setAuthDebugInfo("");
                         }}
                         className={`h-12 w-full rounded-lg border px-3 text-[13px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
                           isLoginEmailError
@@ -783,6 +827,7 @@ export default function HomePage() {
                             setLoginPassword(event.target.value);
                             setLoginErrorField(null);
                             setLoginErrorMessage("");
+                            setAuthDebugInfo("");
                           }}
                           className="h-full w-full bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
                         />
@@ -823,6 +868,7 @@ export default function HomePage() {
                   </form>
 
                   {statusMessage ? <p className="text-[12px] text-[#9ca3af]">{statusMessage}</p> : null}
+                  {authDebugInfo ? <p className="text-[11px] text-amber-300/90">{authDebugInfo}</p> : null}
                   <button
                     type="button"
                     onClick={handleForgotPassword}
