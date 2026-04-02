@@ -95,7 +95,7 @@ export default function HomePage() {
     const verified = searchParams.get("verified");
     if (!verified) return;
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
     supabase.auth
@@ -174,7 +174,7 @@ export default function HomePage() {
     setAuthError("");
     setStatusMessage("");
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
     if (!loginEmail.trim()) {
@@ -212,7 +212,7 @@ export default function HomePage() {
     setLoginErrorMessage("");
     setStatusMessage("");
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
 
@@ -294,7 +294,7 @@ export default function HomePage() {
     setAuthError("");
     setStatusMessage("");
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
 
@@ -343,7 +343,7 @@ export default function HomePage() {
   const handleVerificationContinue = async () => {
     setAuthError("");
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
     const { data } = await supabase.auth.getSession();
@@ -358,7 +358,7 @@ export default function HomePage() {
     setAuthError("");
     setStatusMessage("");
     if (!supabase) {
-      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setAuthError("Missing Supabase configuration. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.");
       return;
     }
     if (!signupEmail.trim()) {
