@@ -45,7 +45,14 @@ const getAuthRedirectUrl = () => {
   return `${origin}/auth/callback`;
 };
 
-const checkEmailExists = async (email: string) => {
+type CheckEmailResult = {
+  exists: boolean;
+  reason?: string;
+  error?: string;
+  detail?: string;
+};
+
+const checkEmailExists = async (email: string): Promise<CheckEmailResult> => {
   const response = await fetch("/api/auth/check-email", {
     method: "POST",
     headers: {
@@ -54,12 +61,23 @@ const checkEmailExists = async (email: string) => {
     body: JSON.stringify({ email }),
   });
 
+  const payload = (await response.json()) as CheckEmailResult;
+
   if (!response.ok) {
-    throw new Error("Failed to check email.");
+    return {
+      exists: false,
+      reason: payload.reason ?? "lookup_failed",
+      error: payload.error ?? "Failed to check email.",
+      detail: payload.detail,
+    };
   }
 
-  const payload = (await response.json()) as { exists?: boolean };
-  return Boolean(payload.exists);
+  return {
+    exists: Boolean(payload.exists),
+    reason: payload.reason ?? "ok",
+    error: payload.error,
+    detail: payload.detail,
+  };
 };
 
 const getDevAuthDiagnostic = (error: unknown) => {
@@ -185,8 +203,13 @@ export default function HomePage() {
 
     try {
       setIsAuthBusy(true);
-      const exists = await checkEmailExists(signupEmail.trim());
-      if (exists) {
+      const result = await checkEmailExists(signupEmail.trim());
+      if (result.reason !== "ok") {
+        setAuthError(result.error ?? "We couldn't verify this email right now. If you already have an account, please log in.");
+        setAuthDebugInfo(result.detail ?? result.reason ?? "");
+        return;
+      }
+      if (result.exists) {
         setAuthError("This email is already registered. Please log in.");
         return;
       }
@@ -284,24 +307,29 @@ export default function HomePage() {
           message.includes("invalid login credentials") ||
           message.includes("invalid credentials") ||
           message.includes("invalid password");
+        const isEmailNotConfirmed = code.includes("email_not_confirmed") || message.includes("email not confirmed");
 
         if (isInvalidEmail) {
           setLoginErrorField("email");
-          setLoginErrorMessage("Invalid email address");
+          setLoginErrorMessage("No account exists for this email address.");
+        } else if (isEmailNotConfirmed) {
+          setAuthError("This account exists, but the email address has not been confirmed yet.");
         } else if (isInvalidPassword) {
-          try {
-            const exists = await checkEmailExists(loginEmail.trim());
-            if (exists) {
+          const result = await checkEmailExists(loginEmail.trim());
+          if (result.reason === "ok") {
+            if (result.exists) {
               setLoginErrorField("password");
-              setLoginErrorMessage("Invalid password");
+              setLoginErrorMessage("This account exists, but the password you entered is incorrect.");
             } else {
               setLoginErrorField("email");
-              setLoginErrorMessage("Invalid email address");
+              setLoginErrorMessage("No account exists for this email address.");
             }
-          } catch {
-            // When lookup is unavailable, default to password error on invalid credentials.
-            setLoginErrorField("password");
-            setLoginErrorMessage("Invalid password");
+          } else {
+            setAuthError(
+              result.error ??
+                "Supabase rejected the password login, and the app could not verify whether this email has an account."
+            );
+            setAuthDebugInfo(result.detail ?? result.reason ?? getDevAuthDiagnostic(error));
           }
         } else {
           setAuthError(getReadableAuthError(error.message));

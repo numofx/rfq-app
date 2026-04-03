@@ -11,7 +11,11 @@ export async function POST(request: NextRequest) {
 
   if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json(
-      { error: "Missing Supabase server configuration. Set SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY." },
+      {
+        exists: false,
+        reason: "missing_server_config",
+        error: "Missing Supabase server configuration. Set SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY.",
+      },
       { status: 500 }
     );
   }
@@ -20,12 +24,12 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as CheckEmailBody;
   } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    return NextResponse.json({ exists: false, reason: "invalid_request", error: "Invalid request body." }, { status: 400 });
   }
 
   const email = body.email?.trim().toLowerCase();
   if (!email) {
-    return NextResponse.json({ error: "Email is required." }, { status: 400 });
+    return NextResponse.json({ exists: false, reason: "missing_email", error: "Email is required." }, { status: 400 });
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -43,8 +47,11 @@ export async function POST(request: NextRequest) {
     .limit(1);
 
   if (error) {
-    return NextResponse.json({ error: "Unable to check email." }, { status: 500 });
+    return NextResponse.json(
+      { exists: false, reason: "lookup_failed", error: "Unable to check email.", detail: error.message },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ exists: Boolean(data && data.length > 0) }, { status: 200 });
+  return NextResponse.json({ exists: Boolean(data && data.length > 0), reason: "ok" }, { status: 200 });
 }
