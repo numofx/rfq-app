@@ -1008,23 +1008,32 @@ export default function HomePage() {
               </>
             ) : view === "verify" ? (
               <>
-                <div className="space-y-5 text-center">
-                  <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.02em] text-[#131318]">
-                    First, let&apos;s verify your email
-                  </h1>
+                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                  <div className="space-y-3">
+                    <div className="flex justify-center">
+                      <div className="relative h-11 w-[160px]">
+                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                      </div>
+                    </div>
 
-                  <p className="text-[14px] leading-[1.5] text-[#3a3b43]">
+                    <div className="space-y-1.5">
+                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                        Verify your email
+                      </h1>
+                      <p className="text-sm text-white/70">Confirm your address to finish account setup</p>
+                    </div>
+                  </div>
+
+                  <p className="text-[14px] leading-[1.6] text-white/70">
                     Check{" "}
-                    <span className="font-semibold text-[#141419]">
-                      {signupEmail.trim() || "your inbox"}
-                    </span>{" "}
-                    to verify your account and get started.
+                    <span className="font-semibold text-white">{signupEmail.trim() || "your inbox"}</span>{" "}
+                    for the verification link, then return here to continue.
                   </p>
 
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="h-[42px] w-full rounded-[12px] bg-[#e5e5e8] text-[14px] font-semibold text-[#141419]"
+                    className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
                   >
                     Resend verification email
                   </button>
@@ -1032,54 +1041,65 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleVerificationContinue}
-                    className="text-[13px] font-medium text-[#6f717b] hover:text-[#444551]"
+                    className="text-[13px] font-medium text-white/65 transition hover:text-white"
                   >
                     I&apos;ve verified &mdash; continue
                   </button>
 
-                  {statusMessage ? <p className="text-[12px] text-[#4b5d4b]">{statusMessage}</p> : null}
-                  {authError ? <p className="text-[12px] text-[#b42318]">{authError}</p> : null}
+                  {statusMessage ? <p className="text-[12px] text-[#9dd6a8]">{statusMessage}</p> : null}
+                  {authError ? <p className="text-[12px] text-[#fca5a5]">{authError}</p> : null}
                 </div>
               </>
             ) : (
               <>
-                <div className="space-y-5">
+                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                  <div className="space-y-3">
+                    <div className="flex justify-center">
+                      <div className="relative h-11 w-[160px]">
+                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                        Create your password
+                      </h1>
+                      <p className="text-sm text-white/70">Finish setting up your Numo account</p>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setView("signup")}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-[#ededf0] text-[16px] text-[#15151b] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-[16px] text-white/85 transition hover:bg-white/10"
                     aria-label="Back to sign up"
                   >
                     &larr;
                   </button>
-
-                  <h1 className="text-[26px] leading-none font-semibold tracking-[-0.02em] text-[#131318]">
-                    Create your password
-                  </h1>
 
                   <form className="space-y-4" aria-label="Create password form" onSubmit={handlePasswordSubmit}>
                     <div>
                       <label htmlFor="new-password" className="sr-only">
                         Password
                       </label>
-                      <div className="flex h-[42px] items-center rounded-[12px] border border-[#e7e7ea] bg-[#efeff2] px-3">
+                      <div className="flex h-12 items-center rounded-lg border border-white/10 bg-white/5 px-3 transition-colors hover:border-white/15 focus-within:border-white/20">
                         <input
                           id="new-password"
                           type={showCreatePassword ? "text" : "password"}
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-[13px] text-[#202026] placeholder:text-[#9697a4] focus:outline-none"
+                          className="h-full w-full bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCreatePassword((prev) => !prev)}
-                          className="ml-2 flex h-[28px] w-[28px] items-center justify-center rounded-[9px] bg-[#ffffff]"
+                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-white/65 hover:text-white/85"
                           aria-label={showCreatePassword ? "Hide password" : "Show password"}
                         >
                           <svg
                             viewBox="0 0 24 24"
-                            className="h-[12px] w-[12px] text-[#1c1c21]"
+                            className="h-[12px] w-[12px]"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
@@ -1098,13 +1118,14 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-[42px] w-full rounded-[12px] bg-gradient-to-r from-[#111118] to-[#171722] text-[14px] font-semibold text-[#f2f2f4] shadow-[0_2px_0_rgba(0,0,0,0.08)]"
+                      className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Creating..." : "Continue →"}
                     </button>
                   </form>
 
-                  {authError ? <p className="text-[12px] text-[#b42318]">{authError}</p> : null}
+                  {authError ? <p className="text-[12px] text-[#fca5a5]">{authError}</p> : null}
+                  {statusMessage ? <p className="text-[12px] text-[#9dd6a8]">{statusMessage}</p> : null}
                 </div>
               </>
             )}
