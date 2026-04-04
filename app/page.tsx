@@ -457,35 +457,7 @@ export default function HomePage() {
     }
   };
 
-  const headerTabs =
-    view === "password" || view === "verify" ? (
-      <div className="translate-y-4 rounded-[12px] bg-[#e5e5e7] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div className="flex items-center gap-1 text-[14px] leading-none">
-          <button
-            type="button"
-            onClick={() => setView("login")}
-            className={`rounded-[10px] px-6 py-2 ${
-              view === "login"
-                ? "bg-[#f5f5f6] font-semibold text-[#141419] shadow-sm"
-                : "font-medium text-[#666674]"
-            }`}
-          >
-            Log in
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("signup")}
-            className={`rounded-[10px] px-6 py-2 ${
-              view === "signup" || view === "password" || view === "verify"
-                ? "bg-[#f5f5f6] font-semibold text-[#141419] shadow-sm"
-                : "font-medium text-[#666674]"
-            }`}
-          >
-            Sign up
-          </button>
-        </div>
-      </div>
-    ) : null;
+  const headerTabs = null;
 
   const accountDisplayName = accountName || [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || "User";
   const accountDisplayEmail = accountEmail || signupEmail.trim() || loginEmail.trim() || "No email available";
