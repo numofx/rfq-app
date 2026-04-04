@@ -458,7 +458,7 @@ export default function HomePage() {
   };
 
   const headerTabs =
-    view !== "team" && view !== "login" && view !== "signup" ? (
+    view === "password" || view === "verify" ? (
       <div className="translate-y-4 rounded-[12px] bg-[#e5e5e7] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
         <div className="flex items-center gap-1 text-[14px] leading-none">
           <button
@@ -489,8 +489,8 @@ export default function HomePage() {
 
   const accountDisplayName = accountName || [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || "User";
   const accountDisplayEmail = accountEmail || signupEmail.trim() || loginEmail.trim() || "No email available";
-  const isLoginView = view === "login";
-  const isPremiumAuthView = view === "login" || view === "signup";
+  const isPremiumAuthView =
+    view === "login" || view === "signup" || view === "password" || view === "verify";
   const headerRight =
     view === "team" ? (
       <div className="relative">
