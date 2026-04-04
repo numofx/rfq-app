@@ -39,12 +39,10 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const { data, error } = await adminClient
-    .schema("auth")
-    .from("users")
-    .select("id")
-    .eq("email", email)
-    .limit(1);
+  const { data, error } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
 
   if (error) {
     return NextResponse.json(
@@ -53,5 +51,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ exists: Boolean(data && data.length > 0), reason: "ok" }, { status: 200 });
+  const exists = Boolean(data?.users?.some((user) => user.email?.trim().toLowerCase() === email));
+
+  return NextResponse.json({ exists, reason: "ok" }, { status: 200 });
 }
