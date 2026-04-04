@@ -544,210 +544,215 @@ export default function HomePage() {
         <>
           <ContentLayout variant="default" className="flex justify-center pt-6 pb-16">
             <CardWrapper size="auth" className="max-w-[420px]">
-              <h1 className="mb-4 text-[24px] leading-none font-semibold tracking-[-0.02em] text-[#131318]">
-                Create a team
-              </h1>
-
-              <p className="mb-6 max-w-[520px] text-[13px] leading-[1.4] text-[#9a9ba7]">
-                You&apos;re creating a team on Numo. You may invite your teammates to collaborate with you after signup.
-              </p>
-
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Enter team name"
-                  className="h-[44px] w-full rounded-[12px] border border-[#e7e7ea] bg-[#e8e8eb] px-3 text-[13px] text-[#202026] placeholder:text-[#9697a4] focus:outline-none"
-                />
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsBusinessMenuOpen((prev) => !prev)}
-                    className={`flex h-[44px] w-full items-center justify-between rounded-[12px] px-3 text-[13px] font-medium focus:outline-none ${
-                      businessType ? "text-[#202026]" : "text-[#9697a4]"
-                    }`}
-                  >
-                    <span>
-                      {businessType
-                        ? businessType === "carry-trader"
-                          ? "Carry Trader"
-                          : businessType.charAt(0).toUpperCase() + businessType.slice(1)
-                        : "What is your business?"}
-                    </span>
-                    <svg
-                      viewBox="0 0 24 24"
-                      className={`h-4 w-4 transition-transform ${isBusinessMenuOpen ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-
-                  {isBusinessMenuOpen ? (
-                    <div className="absolute left-0 top-[50px] z-20 w-[360px] rounded-[16px] bg-[#f4f4f5] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.12)]">
-                      <div className="space-y-4 text-[14px] font-medium text-[#111116]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusinessType("microlender");
-                            setIsBusinessMenuOpen(false);
-                          }}
-                          className="block text-left hover:opacity-80"
-                        >
-                          Microlender
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusinessType("carry-trader");
-                            setIsBusinessMenuOpen(false);
-                          }}
-                          className="block text-left hover:opacity-80"
-                        >
-                          Carry Trader
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusinessType("importer");
-                            setIsBusinessMenuOpen(false);
-                          }}
-                          className="block text-left hover:opacity-80"
-                        >
-                          Importer
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusinessType("exporter");
-                            setIsBusinessMenuOpen(false);
-                          }}
-                          className="block text-left hover:opacity-80"
-                        >
-                          Exporter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusinessType("other");
-                            setIsBusinessMenuOpen(false);
-                          }}
-                          className="block text-left hover:opacity-80"
-                        >
-                          Other
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
+              <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="space-y-1.5">
+                  <h1 className="text-3xl font-semibold tracking-tight text-white">Create a team</h1>
+                  <p className="text-sm leading-[1.6] text-white/70">
+                    You&apos;re creating a team on Numo. You may invite your teammates to collaborate after signup.
+                  </p>
                 </div>
 
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsContactMenuOpen((prev) => !prev)}
-                    className={`flex h-[44px] w-full items-center justify-between rounded-[12px] px-3 text-[13px] font-medium focus:outline-none ${
-                      contactMethod ? "text-[#202026]" : "text-[#9697a4]"
-                    }`}
-                  >
-                    <span>
-                      {contactMethod
-                        ? contactMethod === "phone"
-                          ? "Phone Number"
-                          : "Email"
-                        : "How should we connect with you?"}
-                    </span>
-                    <svg
-                      viewBox="0 0 24 24"
-                      className={`h-4 w-4 transition-transform ${isContactMenuOpen ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-
-                  {isContactMenuOpen ? (
-                    <div className="absolute left-0 top-[50px] z-20 w-[380px] rounded-[16px] bg-[#f4f4f5] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.12)]">
-                      <div className="space-y-4 text-[14px] font-medium text-[#111116]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setContactMethod("email");
-                            setContactValue("");
-                            setIsContactMenuOpen(false);
-                          }}
-                          className="block w-full text-left hover:opacity-80"
-                        >
-                          Email
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setContactMethod("phone");
-                            setContactValue("");
-                            setIsContactMenuOpen(false);
-                          }}
-                          className="block w-full text-left hover:opacity-80"
-                        >
-                          Phone Number
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                {contactMethod ? (
+                <div className="space-y-3">
                   <input
-                    type={contactMethod === "email" ? "email" : "tel"}
-                    value={contactValue}
-                    onChange={(event) => setContactValue(event.target.value)}
-                    placeholder={contactMethod === "email" ? "Enter your email" : "Enter phone number"}
-                    className="h-[44px] w-full rounded-[12px] border-2 border-[#141419] bg-[#ececef] px-3 text-[13px] text-[#202026] placeholder:text-[#9697a4] focus:outline-none"
+                    type="text"
+                    placeholder="Enter team name"
+                    className="h-12 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-[13px] text-white placeholder:text-white/35 hover:border-white/15 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                   />
-                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => router.push("/app")}
-                  className="h-[44px] w-full rounded-[12px] bg-gradient-to-r from-[#111118] to-[#171722] text-[13px] font-semibold text-[#f2f2f4] shadow-[0_2px_0_rgba(0,0,0,0.08)]"
-                >
-                  Finish Setup &rarr;
-                </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsBusinessMenuOpen((prev) => !prev)}
+                      className={`flex h-12 w-full items-center justify-between rounded-lg border px-3 text-[13px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
+                        businessType
+                          ? "border-white/15 bg-white/5 text-white hover:border-white/20"
+                          : "border-white/10 bg-white/5 text-white/45 hover:border-white/15"
+                      }`}
+                    >
+                      <span>
+                        {businessType
+                          ? businessType === "carry-trader"
+                            ? "Carry Trader"
+                            : businessType.charAt(0).toUpperCase() + businessType.slice(1)
+                          : "What is your business?"}
+                      </span>
+                      <svg
+                        viewBox="0 0 24 24"
+                        className={`h-4 w-4 transition-transform ${isBusinessMenuOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isBusinessMenuOpen ? (
+                      <div className="absolute left-0 top-[56px] z-20 w-full rounded-[16px] border border-white/10 bg-[#0f141b] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
+                        <div className="space-y-3 text-[14px] font-medium text-white">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusinessType("microlender");
+                              setIsBusinessMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Microlender
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusinessType("carry-trader");
+                              setIsBusinessMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Carry Trader
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusinessType("importer");
+                              setIsBusinessMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Importer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusinessType("exporter");
+                              setIsBusinessMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Exporter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusinessType("other");
+                              setIsBusinessMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Other
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsContactMenuOpen((prev) => !prev)}
+                      className={`flex h-12 w-full items-center justify-between rounded-lg border px-3 text-[13px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
+                        contactMethod
+                          ? "border-white/15 bg-white/5 text-white hover:border-white/20"
+                          : "border-white/10 bg-white/5 text-white/45 hover:border-white/15"
+                      }`}
+                    >
+                      <span>
+                        {contactMethod
+                          ? contactMethod === "phone"
+                            ? "Phone Number"
+                            : "Email"
+                          : "How should we connect with you?"}
+                      </span>
+                      <svg
+                        viewBox="0 0 24 24"
+                        className={`h-4 w-4 transition-transform ${isContactMenuOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isContactMenuOpen ? (
+                      <div className="absolute left-0 top-[56px] z-20 w-full rounded-[16px] border border-white/10 bg-[#0f141b] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
+                        <div className="space-y-3 text-[14px] font-medium text-white">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setContactMethod("email");
+                              setContactValue("");
+                              setIsContactMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Email
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setContactMethod("phone");
+                              setContactValue("");
+                              setIsContactMenuOpen(false);
+                            }}
+                            className="block w-full rounded-[10px] px-2 py-2 text-left transition hover:bg-white/5"
+                          >
+                            Phone Number
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {contactMethod ? (
+                    <input
+                      type={contactMethod === "email" ? "email" : "tel"}
+                      value={contactValue}
+                      onChange={(event) => setContactValue(event.target.value)}
+                      placeholder={contactMethod === "email" ? "Enter your email" : "Enter phone number"}
+                      className="h-12 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-[13px] text-white placeholder:text-white/35 hover:border-white/15 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    />
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => router.push("/app")}
+                    className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
+                  >
+                    Finish Setup &rarr;
+                  </button>
+                </div>
               </div>
             </CardWrapper>
           </ContentLayout>
 
           <footer className="pointer-events-none fixed inset-x-0 bottom-0 px-4 pb-4">
-            <div className={`${containerClass} relative flex items-end justify-between text-[#8f9099]`}>
+            <div className={`${containerClass} relative flex items-end justify-between text-white/45`}>
               <div className="pointer-events-auto text-left text-[11px] leading-[1.2]">
                 <p>Logged in as:</p>
-                <p className="mt-1 text-[11px] font-semibold text-[#141419]">
+                <p className="mt-1 text-[11px] font-semibold text-white/75">
                   {signupEmail.trim() || "r.leifke@gmail.com"}
                 </p>
               </div>
 
               <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[10px]">
                 <div className="flex items-center gap-3">
-                  <a href="#" className="hover:text-[#70707a]">
+                  <a href="#" className="transition hover:text-white/70">
                     Privacy Policy
                   </a>
                   <span aria-hidden="true">&middot;</span>
-                  <a href="#" className="hover:text-[#70707a]">
+                  <a href="#" className="transition hover:text-white/70">
                     Cookie Policy
                   </a>
                 </div>
               </div>
 
-              <button type="button" className="pointer-events-auto text-[14px] text-[#141419]">
+              <button type="button" className="pointer-events-auto text-[14px] text-white/60 transition hover:text-white/80">
                 Log out
               </button>
             </div>
