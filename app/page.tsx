@@ -438,6 +438,9 @@ export default function HomePage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: signupEmail.trim(),
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+        },
       });
       if (error) {
         setAuthError(getReadableAuthError(error.message));
