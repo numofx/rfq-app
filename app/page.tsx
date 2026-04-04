@@ -542,7 +542,7 @@ export default function HomePage() {
     >
       {view === "team" ? (
         <>
-          <ContentLayout variant="default" className="flex justify-center pt-6 pb-16">
+          <ContentLayout variant="default" className="flex min-h-[calc(100vh-8rem)] items-center justify-center pt-2 pb-16">
             <CardWrapper size="auth" className="max-w-[420px]">
               <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
                 <div className="space-y-1.5">
