@@ -38,8 +38,8 @@ const getAuthRedirectUrl = () => {
   }
 
   const origin = window.location.origin;
-  if (origin === "http://rfq.numofx.com") {
-    return "https://rfq.numofx.com/auth/callback";
+  if (origin === "http://app.numofx.com") {
+    return "https://app.numofx.com/auth/callback";
   }
 
   return `${origin}/auth/callback`;
@@ -156,6 +156,20 @@ export default function HomePage() {
         setAuthError("We couldn’t confirm your session yet. Please try again.");
       });
   }, [searchParams]);
+
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    if (verified || !supabase) return;
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (data.session) {
+          router.replace("/trade");
+        }
+      })
+      .catch(() => {});
+  }, [router, searchParams]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -340,7 +354,7 @@ export default function HomePage() {
         return;
       }
 
-      router.push("/app");
+      router.push("/trade");
     } catch (error) {
       setLoginErrorField("password");
       setLoginErrorMessage("Invalid password");
@@ -721,7 +735,7 @@ export default function HomePage() {
 
                   <button
                     type="button"
-                    onClick={() => router.push("/app")}
+                    onClick={() => router.push("/trade")}
                     className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
                   >
                     Finish Setup &rarr;

@@ -44,7 +44,7 @@ export function Header({
           {showGoToAppButton && (
             <Button
               variant="link"
-              href="/app"
+              href="/trade"
               className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
             >
               Secure Your Rate
