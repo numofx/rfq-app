@@ -25,7 +25,7 @@ type RFQState =
   | "DONE"
   | "ERROR";
 
-type Pair = "USD/NGN" | "USD/KES" | "USDC/cNGN";
+type Pair = "USD/NGN" | "USD/KES" | "USDC/cNGN" | "USD/EGP" | "USD/GHS" | "USD/ZMW";
 type ProductMode = "futures" | "options";
 type SpotHistoryPoint = { t: number; spot: number };
 
@@ -45,6 +45,9 @@ const CHAINLINK_NGN_USD_FEED_BASE = "0xdfbb5Cbc88E382de007bfe6CE99C388176ED80aD"
 const CHAINLINK_KES_USD_FEED_CELO = "0x0826492a24b1dBd1d8fcB4701b38C557CE685e9D";
 const DEFAULT_SPOT_BY_PAIR: Partial<Record<Pair, number>> = {
   "USD/KES": 130,
+  "USD/EGP": 50,
+  "USD/GHS": 15,
+  "USD/ZMW": 28,
 };
 const chainlinkAggregatorV3Abi = [
   {
@@ -81,6 +84,9 @@ const pairs = [
   { id: "usd-ngn", label: "USD/NGN" },
   { id: "usd-kes", label: "USD/KES" },
   { id: "usdc-cngn", label: "USDC/cNGN" },
+  { id: "usd-egp", label: "USD/EGP" },
+  { id: "usd-ghs", label: "USD/GHS" },
+  { id: "usd-zmw", label: "USD/ZMW" },
 ] as const;
 
 const forwardPointsByTenor: Record<"7D" | "30D" | "90D" | "180D" | "365D", number> = {
@@ -226,6 +232,48 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
                 flags={[
                   { src: "/tokens/usdc.svg", alt: "USDC token" },
                   { src: "/tokens/cngn.svg", alt: "cNGN token" },
+                ]}
+              />
+            ),
+          };
+        }
+        if (nextPair.label === "USD/EGP") {
+          return {
+            value: nextPair.label as Pair,
+            label: nextPair.label,
+            trailing: (
+              <PairFlags
+                flags={[
+                  { src: "/tokens/us.svg", alt: "United States flag" },
+                  { src: "/tokens/eg.svg", alt: "Egypt flag" },
+                ]}
+              />
+            ),
+          };
+        }
+        if (nextPair.label === "USD/GHS") {
+          return {
+            value: nextPair.label as Pair,
+            label: nextPair.label,
+            trailing: (
+              <PairFlags
+                flags={[
+                  { src: "/tokens/us.svg", alt: "United States flag" },
+                  { src: "/tokens/gh.svg", alt: "Ghana flag" },
+                ]}
+              />
+            ),
+          };
+        }
+        if (nextPair.label === "USD/ZMW") {
+          return {
+            value: nextPair.label as Pair,
+            label: nextPair.label,
+            trailing: (
+              <PairFlags
+                flags={[
+                  { src: "/tokens/us.svg", alt: "United States flag" },
+                  { src: "/tokens/zm.svg", alt: "Zambia flag" },
                 ]}
               />
             ),

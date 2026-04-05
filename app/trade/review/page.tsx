@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Calendar, CircleDollarSign, Percent, TrendingUp } from "lucide-react";
 
 type OptionType = "call" | "put";
-type Pair = "USD/NGN" | "USD/KES" | "USDC/cNGN";
+type Pair = "USD/NGN" | "USD/KES" | "USDC/cNGN" | "USD/EGP" | "USD/GHS" | "USD/ZMW";
 
 function formatPairLabel(pair: string) {
   return pair.replace("/", " / ");
@@ -66,6 +66,12 @@ export default function ReviewPage() {
     const scenario =
       pair === "USD/KES"
         ? { up: 160, flat: 130 }
+        : pair === "USD/EGP"
+          ? { up: 58, flat: 50 }
+          : pair === "USD/GHS"
+            ? { up: 18, flat: 15 }
+            : pair === "USD/ZMW"
+              ? { up: 34, flat: 28 }
         : { up: 2600, flat: 1500 };
     const contractCount = notional > 0 ? notional / Math.max(strike, 0.0001) : 0;
     const premium = contractCount * indicative;
