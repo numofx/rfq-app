@@ -25,7 +25,7 @@ type RFQState =
   | "DONE"
   | "ERROR";
 
-type Pair = "USD/NGN" | "USD/KES";
+type Pair = "USD/NGN" | "USD/KES" | "USDC/cNGN";
 type ProductMode = "futures" | "options";
 type SpotHistoryPoint = { t: number; spot: number };
 
@@ -80,6 +80,7 @@ const celoPublicClient = createPublicClient({
 const pairs = [
   { id: "usd-ngn", label: "USD/NGN" },
   { id: "usd-kes", label: "USD/KES" },
+  { id: "usdc-cngn", label: "USDC/cNGN" },
 ] as const;
 
 const forwardPointsByTenor: Record<"7D" | "30D" | "90D" | "180D" | "365D", number> = {
@@ -216,6 +217,20 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
             ),
           };
         }
+        if (nextPair.label === "USDC/cNGN") {
+          return {
+            value: nextPair.label as Pair,
+            label: nextPair.label,
+            trailing: (
+              <PairFlags
+                flags={[
+                  { src: "/tokens/usdc.svg", alt: "USDC token" },
+                  { src: "/tokens/cngn.svg", alt: "cNGN token" },
+                ]}
+              />
+            ),
+          };
+        }
         return {
           value: nextPair.label as Pair,
           label: nextPair.label,
@@ -236,7 +251,7 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
   const parsedStrike = Number(strike.replace(/,/g, "")) || 0;
   const [baseCurrency, quoteCurrency] = pair.split("/") as [string, string];
   const spot =
-    pair === "USD/NGN"
+    pair === "USD/NGN" || pair === "USDC/cNGN"
       ? usdcCngnSpot
       : pair === "USD/KES"
         ? usdtKesmSpot ?? DEFAULT_SPOT_BY_PAIR[pair]
@@ -535,7 +550,7 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
                 <HelperText className="mt-1 text-[11px]">
                   Spot:{" "}
                   <span className="text-text">{forwardSpot.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>{" "}
-                  NGN per USD
+                  {quoteCurrency} per {baseCurrency}
                 </HelperText>
               </div>
 
@@ -567,7 +582,7 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
                     className="pr-28"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 whitespace-nowrap text-[9px] leading-none font-semibold text-muted">
-                    NGN per USD
+                    {quoteCurrency} per {baseCurrency}
                   </span>
                 </div>
                 <HelperText className="mt-1 text-[11px]">Choose the rate where protection begins</HelperText>

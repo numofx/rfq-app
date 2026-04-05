@@ -106,6 +106,7 @@ export function RFQSidePanel({
   notional = 10_000,
 }: RFQSidePanelProps) {
   const [activeTab, setActiveTab] = useState<PanelTab>("chart");
+  const [baseCurrency, quoteCurrency] = pair.split("/");
   const hasSpot = typeof spot === "number" && Number.isFinite(spot) && spot > 0;
   const safeSpot = hasSpot ? (spot as number) : Math.max(strike || 1, 1);
 
@@ -173,7 +174,7 @@ export function RFQSidePanel({
         </section>
 
         <p className="text-[12px] leading-[1.4] text-muted">
-          You’re protected if NGN weakens beyond {formatWhole(protectionRate)}.
+          You’re protected if {quoteCurrency} weakens beyond {formatWhole(protectionRate)}.
         </p>
 
         <div className="h-[340px] rounded-[12px] border border-border/70 bg-transparent px-0 py-0">
@@ -204,7 +205,7 @@ export function RFQSidePanel({
                   fontSize: 11,
                   color: "hsl(var(--text))",
                 }}
-                labelFormatter={(value) => `USD/NGN @ Expiry ${formatTwo(Number(value))}`}
+                labelFormatter={(value) => `${pair} @ Expiry ${formatTwo(Number(value))}`}
                 formatter={(value: number) => [`${formatWhole(value)}`, "Payout"]}
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
@@ -252,7 +253,7 @@ export function RFQSidePanel({
     <Panel className="space-y-4 p-6">
       <div className="grid grid-cols-2 gap-1">
         <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
-          <div className="text-[10px] font-semibold text-muted">Spot (NGN per USD)</div>
+          <div className="text-[10px] font-semibold text-muted">{`Spot (${quoteCurrency} per ${baseCurrency})`}</div>
           <div className="mt-0.5 text-[14px] font-semibold text-text">{hasSpot ? formatTwo(safeSpot) : "—"}</div>
         </div>
         <div className="rounded-[10px] border border-border/70 bg-panel-2/50 px-2.5 py-2">
@@ -298,7 +299,7 @@ export function RFQSidePanel({
                   fontSize: 11,
                   color: "hsl(var(--text))",
                 }}
-                formatter={(value: number) => [`${formatTwo(value)} NGN/USD`, "Spot"]}
+                formatter={(value: number) => [`${formatTwo(value)} ${quoteCurrency}/${baseCurrency}`, "Spot"]}
               />
               <ReferenceLine y={safeStrike} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
               {breakeven ? <ReferenceLine y={breakeven} stroke="hsl(var(--muted))" strokeDasharray="3 3" /> : null}
