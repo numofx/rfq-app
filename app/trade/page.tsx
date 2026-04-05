@@ -80,7 +80,10 @@ export default function TradePage() {
           <div className="mt-3 border-t border-border/70 pt-3">
             <button
               type="button"
-              onClick={() => setIsAccountMenuOpen(false)}
+              onClick={() => {
+                setIsAccountMenuOpen(false);
+                router.push("/account");
+              }}
               className="block text-[14px] font-medium text-text hover:text-white active:font-semibold"
             >
               Manage account
