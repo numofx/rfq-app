@@ -262,6 +262,7 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
     day: "numeric",
     year: "numeric",
   });
+  const settlementLabel = pair === "USDC/cNGN" ? "PHYSICAL DELIVERY" : "CASH SETTLED";
   const minDateIso = toIsoDate(new Date());
   const expiryCountdownDays = useMemo(() => {
     if (!expiryDate) return null;
@@ -712,7 +713,7 @@ export function RFQInterface({ mode }: RFQInterfaceProps) {
               <div className="flex items-center justify-between pb-2">
                 <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text">Call Option</h2>
                 <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.04em] text-cyan-200">
-                  PHYSICAL DELIVERY
+                  {settlementLabel}
                 </span>
               </div>
 
