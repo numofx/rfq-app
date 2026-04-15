@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation";
 import { RFQInterface } from "@/components/forms/rfq-interface";
 import { AppLayout, CardWrapper, ContentLayout } from "@/components/layout/page-shell";
 import { AppBg } from "@/components/ui/app-bg";
-import { SegmentedTabs } from "@/components/ui/rfq-primitives";
 import { supabase } from "@/lib/supabase/client";
 
 export default function TradePage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"futures" | "options">("options");
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [accountName, setAccountName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
@@ -110,25 +108,18 @@ export default function TradePage() {
     </div>
   );
 
-  const headerCenter = (
-    <div className="w-[220px]">
-      <SegmentedTabs
-        value={mode}
-        onChange={setMode}
-        options={[
-          { label: "Hedge", value: "futures" },
-          { label: "Advanced", value: "options" },
-        ]}
-      />
+  const headerLeft = (
+    <div className="rounded-md border border-border/70 bg-panel-2/60 px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-muted">
+      USDC-cNGN Spot
     </div>
   );
 
   return (
     <AppBg>
-      <AppLayout headerCenter={headerCenter} headerRight={headerRight} className="bg-transparent text-text">
+      <AppLayout headerLeft={headerLeft} headerRight={headerRight} className="bg-transparent text-text">
         <ContentLayout variant="rfq">
-          <CardWrapper size="ticket" className="max-w-[980px]">
-            <RFQInterface mode={mode} />
+          <CardWrapper size="ticket" className="max-w-[1000px]">
+            <RFQInterface />
           </CardWrapper>
         </ContentLayout>
       </AppLayout>
