@@ -7,6 +7,7 @@ import "./globals.css";
 
 // Import Providers - now with SSR enabled since we handle build-time gracefully
 import { Providers } from "@/components/providers";
+import { CenteredLoader } from "@/components/ui/loader";
 
 export const metadata: Metadata = {
   title: "Numo: Frontier FX Hedging",
@@ -34,7 +35,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Providers>
-          <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+          <Suspense fallback={<CenteredLoader />}>{children}</Suspense>
         </Providers>
       </body>
     </html>
