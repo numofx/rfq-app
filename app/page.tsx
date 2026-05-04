@@ -800,7 +800,7 @@ export default function HomePage() {
                       <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
                         Log in
                       </h1>
-                      <p className="text-sm text-white/70">Devaluation insurance for frontier currencies</p>
+                      <p className="text-sm text-white/70">Lock in exchange rates ahead of time.</p>
                     </div>
                   </div>
 
@@ -924,7 +924,7 @@ export default function HomePage() {
                       <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
                         Create account
                       </h1>
-                      <p className="text-sm text-white/70">Devaluation insurance for frontier currencies</p>
+                      <p className="text-sm text-white/70">Lock in exchange rates ahead of time.</p>
                     </div>
                   </div>
 
