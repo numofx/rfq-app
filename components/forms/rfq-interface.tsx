@@ -79,6 +79,12 @@ interface RfqActionBarProps {
   errorMessage: string | null;
 }
 
+interface MarketPresentation {
+  marketLabel: string;
+  marketTitle: string;
+  marketKind: "Spot" | "Future";
+}
+
 const DEFAULT_PAIR: Pair = "USDC/cNGN";
 const DEFAULT_SETTLEMENT: Settlement = "cNGN";
 const MIN_SIZE_USD = 10_000;
@@ -144,11 +150,11 @@ function getQuoteFlow(side: SideMode, price: number, sizeUsd: number) {
   };
 }
 
-function RFQPageHeader() {
+function RFQPageHeader({ marketTitle, marketKind }: Pick<MarketPresentation, "marketTitle" | "marketKind">) {
   return (
     <div className="space-y-1">
-      <p className="text-[11px] font-semibold tracking-[0.06em] text-muted">NUMO / RFQ / USDC-cNGN SPOT</p>
-      <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-text">Spot RFQ</h1>
+      <p className="text-[11px] font-semibold tracking-[0.06em] text-muted">{`NUMO / RFQ / ${marketTitle}`}</p>
+      <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-text">{marketKind} RFQ</h1>
     </div>
   );
 }
@@ -506,7 +512,7 @@ function RfqActionBar({
             ? "Accepting Quote..."
             : state === "ACCEPTED"
               ? "Quote Accepted"
-              : "Get Firm Quote"}
+              : "Get Quote"}
       </PrimaryButton>
       {errorMessage ? <p className="text-[11px] text-red-200">{errorMessage}</p> : null}
     </div>
@@ -624,11 +630,13 @@ function RFQTicket({
 }
 
 function RFQStatusPanel({
+  marketLabel,
   state,
   quote,
   quoteSecondsRemaining,
   requestingElapsedSeconds,
 }: {
+  marketLabel: string;
   state: QuoteLifecycleState;
   quote: SpotQuote | null;
   quoteSecondsRemaining: number;
@@ -675,6 +683,8 @@ function RFQStatusPanel({
       <Panel className="space-y-2 p-4">
         <p className="text-[11px] font-semibold tracking-[0.04em] text-muted">MARKET</p>
         <div className="grid grid-cols-2 gap-y-1 text-[11px]">
+          <span className="text-muted">Selected market</span>
+          <span className="text-right text-text">{marketLabel}</span>
           <span className="text-muted">Indicative rate</span>
           <span className="text-right text-text tabular-nums">{formatRate(INDICATIVE_RATE)} cNGN / USDC</span>
           <span className="text-muted">Size band</span>
@@ -687,7 +697,7 @@ function RFQStatusPanel({
   );
 }
 
-export function RFQInterface() {
+export function RFQInterface({ marketLabel, marketTitle, marketKind }: MarketPresentation) {
   const [state, setState] = useState<QuoteLifecycleState>("IDLE");
   const [pair] = useState<Pair>(DEFAULT_PAIR);
   const [settlement] = useState<Settlement>(DEFAULT_SETTLEMENT);
@@ -849,7 +859,7 @@ export function RFQInterface() {
 
   return (
     <div className="w-full max-w-[1000px] space-y-3">
-      <RFQPageHeader />
+      <RFQPageHeader marketTitle={marketTitle} marketKind={marketKind} />
 
       <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <RFQTicket
@@ -872,6 +882,7 @@ export function RFQInterface() {
         />
 
         <RFQStatusPanel
+          marketLabel={marketLabel}
           state={state}
           quote={hasQuote ? quote : null}
           quoteSecondsRemaining={quoteSecondsRemaining}
