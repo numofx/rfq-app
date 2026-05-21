@@ -12,14 +12,13 @@ type MarketId = "spot" | "june30-2026" | "dec31-2026";
 interface MarketOption {
   id: MarketId;
   label: string;
-  title: string;
   kind: "Spot" | "Future";
 }
 
 const MARKET_OPTIONS: MarketOption[] = [
-  { id: "spot", label: "USDC-cNGN", title: "USDC-cNGN SPOT", kind: "Spot" },
-  { id: "june30-2026", label: "USDC-cNGN JUNE30 2026", title: "USDC-cNGN JUNE30 2026", kind: "Future" },
-  { id: "dec31-2026", label: "USDC-cNGN DEC31 2026", title: "USDC-cNGN DEC31 2026", kind: "Future" },
+  { id: "spot", label: "USDC-cNGN", kind: "Spot" },
+  { id: "june30-2026", label: "USDC-cNGN JUNE30 2026", kind: "Future" },
+  { id: "dec31-2026", label: "USDC-cNGN DEC31 2026", kind: "Future" },
 ];
 
 function MarketSelector({
@@ -111,8 +110,8 @@ function MarketSelector({
 export default function TradePage() {
   const router = useRouter();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [accountName, setAccountName] = useState("");
-  const [accountEmail, setAccountEmail] = useState("");
+  const [accountName, setAccountName] = useState("Hello, Robert!");
+  const [accountEmail, setAccountEmail] = useState("robert@numofx.com");
   const [selectedMarket, setSelectedMarket] = useState<MarketOption>(MARKET_OPTIONS[0]);
 
   useEffect(() => {
@@ -130,8 +129,8 @@ export default function TradePage() {
         const fullName = [first, last].filter(Boolean).join(" ");
         const fallbackName = typeof metadata?.name === "string" ? metadata.name.trim() : "";
 
-        setAccountName(fullName || fallbackName || "User");
-        setAccountEmail(user.email ?? "No email available");
+        setAccountName(fullName || fallbackName || "Hello, Robert!");
+        setAccountEmail(user.email ?? "robert@numofx.com");
       })
       .catch(() => {});
 
@@ -174,8 +173,8 @@ export default function TradePage() {
 
       {isAccountMenuOpen ? (
         <div className="absolute right-0 z-30 mt-2 w-[240px] rounded-2xl border border-border/70 bg-panel p-4 shadow-panel backdrop-blur-panel">
-          <p className="text-[15px] leading-none font-semibold text-text">{accountEmail}</p>
-          <p className="mt-1.5 text-[13px] font-medium text-muted">{accountName}</p>
+          <p className="text-[15px] leading-none font-semibold text-text">{accountName}</p>
+          <p className="mt-1.5 text-[13px] font-medium text-muted">{accountEmail}</p>
 
           <div className="mt-3 border-t border-border/70 pt-3">
             <button
@@ -214,10 +213,10 @@ export default function TradePage() {
 
   return (
     <AppBg>
-      <AppLayout headerLeft={headerLeft} headerRight={headerRight} className="bg-transparent text-text">
+      <AppLayout headerRight={headerRight} className="bg-transparent text-text">
         <ContentLayout variant="rfq">
           <CardWrapper size="ticket" className="max-w-[1000px]">
-            <RFQInterface marketLabel={selectedMarket.label} marketTitle={selectedMarket.title} marketKind={selectedMarket.kind} />
+            <RFQInterface marketLabel={selectedMarket.label} marketKind={selectedMarket.kind} />
           </CardWrapper>
         </ContentLayout>
       </AppLayout>

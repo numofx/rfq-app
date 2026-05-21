@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { Panel } from "@/components/ui/panel";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { FieldLabel } from "@/components/ui/rfq-primitives";
@@ -39,6 +38,7 @@ interface RfqDirectionToggleProps {
   value: SideMode;
   onChange: (next: SideMode) => void;
   disabled: boolean;
+  marketKind: "Spot" | "Future";
 }
 
 interface NotionalPresetChipsProps {
@@ -81,7 +81,6 @@ interface RfqActionBarProps {
 
 interface MarketPresentation {
   marketLabel: string;
-  marketTitle: string;
   marketKind: "Spot" | "Future";
 }
 
@@ -150,16 +149,50 @@ function getQuoteFlow(side: SideMode, price: number, sizeUsd: number) {
   };
 }
 
-function RFQPageHeader({ marketTitle, marketKind }: Pick<MarketPresentation, "marketTitle" | "marketKind">) {
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] font-semibold tracking-[0.06em] text-muted">{`NUMO / RFQ / ${marketTitle}`}</p>
-      <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-text">{marketKind} RFQ</h1>
-    </div>
-  );
-}
+function RfqDirectionToggle({ value, onChange, disabled, marketKind }: RfqDirectionToggleProps) {
+  if (marketKind === "Future") {
+    return (
+      <div className="grid grid-cols-1 gap-1 rounded-lg border border-border/70 bg-panel-2/60 p-1 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => onChange("BUY_CNGN")}
+          disabled={disabled}
+          className={`rounded-md border px-3 py-2 text-left transition-colors ${
+            value === "BUY_CNGN"
+              ? "border-white bg-white text-black shadow-[0_0_0_1px_rgba(255,255,255,0.35)]"
+              : "border-transparent text-muted hover:text-text"
+          }`}
+        >
+          <div className="text-[12px] font-semibold">Long USD</div>
+          <div className={`mt-0.5 text-[11px] ${value === "BUY_CNGN" ? "text-black/70" : "text-muted"}`}>
+            Buy USD / sell NGN
+          </div>
+          <div className={`mt-1 text-[10px] ${value === "BUY_CNGN" ? "text-black/70" : "text-muted"}`}>
+            Lock USD at this rate
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange("SELL_CNGN")}
+          disabled={disabled}
+          className={`rounded-md border px-3 py-2 text-left transition-colors ${
+            value === "SELL_CNGN"
+              ? "border-white bg-white text-black shadow-[0_0_0_1px_rgba(255,255,255,0.35)]"
+              : "border-transparent text-muted hover:text-text"
+          }`}
+        >
+          <div className="text-[12px] font-semibold">Short USD</div>
+          <div className={`mt-0.5 text-[11px] ${value === "SELL_CNGN" ? "text-black/70" : "text-muted"}`}>
+            Sell USD / buy NGN
+          </div>
+          <div className={`mt-1 text-[10px] ${value === "SELL_CNGN" ? "text-black/70" : "text-muted"}`}>
+            Earn carry / provide liquidity
+          </div>
+        </button>
+      </div>
+    );
+  }
 
-function RfqDirectionToggle({ value, onChange, disabled }: RfqDirectionToggleProps) {
   return (
     <div className="grid grid-cols-2 gap-1 rounded-lg border border-border/70 bg-panel-2/60 p-1">
       <button
@@ -520,13 +553,12 @@ function RfqActionBar({
 }
 
 function RFQTicket({
+  marketKind,
   side,
   state,
   notionalInput,
   onSideChange,
   onNotionalChange,
-  receiveAsset,
-  receiveAmount,
   quote,
   quoteSecondsRemaining,
   deltaPct,
@@ -537,13 +569,12 @@ function RFQTicket({
   onReject,
   errorMessage,
 }: {
+  marketKind: "Spot" | "Future";
   side: SideMode;
   state: QuoteLifecycleState;
   notionalInput: string;
   onSideChange: (next: SideMode) => void;
   onNotionalChange: (next: string) => void;
-  receiveAsset: "cNGN" | "USDC";
-  receiveAmount: number;
   quote: SpotQuote | null;
   quoteSecondsRemaining: number;
   deltaPct: number | null;
@@ -554,8 +585,10 @@ function RFQTicket({
   onReject: () => void;
   errorMessage: string | null;
 }) {
-  const sendAsset = side === "BUY_CNGN" ? "USDC" : "cNGN";
   const directionLocked = state === "REQUESTING" || state === "QUOTE_ACTIVE" || state === "ACCEPTING";
+  const sideLabel = marketKind === "Future" ? (side === "BUY_CNGN" ? "Long" : "Short") : side === "BUY_CNGN" ? "Buy" : "Sell";
+  const priceValue =
+    quote && (state === "QUOTE_ACTIVE" || state === "ACCEPTING" || state === "ACCEPTED") ? quote.price : INDICATIVE_RATE;
 
   return (
     <Panel className="space-y-4 p-4 sm:p-5">
@@ -573,46 +606,31 @@ function RFQTicket({
         errorMessage={errorMessage}
       />
 
-      <RfqDirectionToggle value={side} onChange={onSideChange} disabled={directionLocked} />
+      <RfqDirectionToggle value={side} onChange={onSideChange} disabled={directionLocked} marketKind={marketKind} />
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
-          <FieldLabel>You pay</FieldLabel>
-          <div className="flex h-10 items-center gap-2 rounded-lg border border-border/70 bg-panel px-3">
-            <Image
-              src={sendAsset === "USDC" ? "/tokens/usdc.svg" : "/tokens/cngn.svg"}
-              alt={`${sendAsset} token`}
-              width={16}
-              height={16}
-              className="h-4 w-4 rounded-full"
-            />
-            <span className="text-[13px] font-semibold text-text">{sendAsset}</span>
-          </div>
-        </div>
-
-        <NotionalInput
-          value={notionalInput}
-          onChange={onNotionalChange}
-          label={`${sendAsset} notional`}
-          disabled={directionLocked}
-          onPreset={onPresetNotional}
-        />
-      </div>
+      <NotionalInput
+        value={notionalInput}
+        onChange={onNotionalChange}
+        label="Notional"
+        disabled={directionLocked}
+        onPreset={onPresetNotional}
+      />
 
       <div className="space-y-1">
-        <FieldLabel>You receive</FieldLabel>
-        <div className="flex h-10 items-center justify-between rounded-lg border border-border/70 bg-panel/70 px-3">
-          <span className="flex items-center gap-2">
-            <Image
-              src={receiveAsset === "USDC" ? "/tokens/usdc.svg" : "/tokens/cngn.svg"}
-              alt={`${receiveAsset} token`}
-              width={16}
-              height={16}
-              className="h-4 w-4 rounded-full"
-            />
-            <span className="text-[13px] font-semibold text-text">{receiveAsset}</span>
-          </span>
-          <span className="text-[13px] font-semibold text-text tabular-nums">{formatAmount(receiveAmount)}</span>
+        <FieldLabel>Position</FieldLabel>
+        <div className="space-y-2 rounded-lg border border-border/70 bg-panel/70 p-3">
+          <div className="flex items-center justify-between gap-3 text-[12px]">
+            <span className="text-muted">Side</span>
+            <span className="font-semibold text-text">{sideLabel}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[12px]">
+            <span className="text-muted">Notional</span>
+            <span className="font-semibold text-text tabular-nums">${formatAmount(parsedNotional || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[12px]">
+            <span className="text-muted">Price</span>
+            <span className="font-semibold text-text tabular-nums">{formatRate(priceValue)} cNGN / USDC</span>
+          </div>
         </div>
       </div>
 
@@ -697,7 +715,7 @@ function RFQStatusPanel({
   );
 }
 
-export function RFQInterface({ marketLabel, marketTitle, marketKind }: MarketPresentation) {
+export function RFQInterface({ marketLabel, marketKind }: MarketPresentation) {
   const [state, setState] = useState<QuoteLifecycleState>("IDLE");
   const [pair] = useState<Pair>(DEFAULT_PAIR);
   const [settlement] = useState<Settlement>(DEFAULT_SETTLEMENT);
@@ -716,17 +734,6 @@ export function RFQInterface({ marketLabel, marketTitle, marketKind }: MarketPre
     if (!parsedNotional || parsedNotional <= 0) return 0;
     return side === "BUY_CNGN" ? parsedNotional : parsedNotional / INDICATIVE_RATE;
   }, [parsedNotional, side]);
-
-  const receiveAsset: "cNGN" | "USDC" = side === "BUY_CNGN" ? "cNGN" : "USDC";
-
-  const receiveAmount = useMemo(() => {
-    if (quote && (state === "QUOTE_ACTIVE" || state === "ACCEPTING" || state === "ACCEPTED")) {
-      return side === "BUY_CNGN" ? quote.sizeUsd * quote.price : quote.sizeUsd;
-    }
-
-    if (!parsedNotional || parsedNotional <= 0) return 0;
-    return side === "BUY_CNGN" ? parsedNotional * INDICATIVE_RATE : parsedNotional / INDICATIVE_RATE;
-  }, [parsedNotional, quote, side, state]);
 
   const deltaPct = useMemo(() => {
     if (!quote) return null;
@@ -859,17 +866,14 @@ export function RFQInterface({ marketLabel, marketTitle, marketKind }: MarketPre
 
   return (
     <div className="w-full max-w-[1000px] space-y-3">
-      <RFQPageHeader marketTitle={marketTitle} marketKind={marketKind} />
-
       <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <RFQTicket
+          marketKind={marketKind}
           side={side}
           state={state}
           notionalInput={notionalInput}
           onSideChange={setSide}
           onNotionalChange={setNotionalInput}
-          receiveAsset={receiveAsset}
-          receiveAmount={receiveAmount}
           quote={quote}
           quoteSecondsRemaining={quoteSecondsRemaining}
           deltaPct={deltaPct}
