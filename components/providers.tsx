@@ -3,6 +3,7 @@
 import { PrivyWagmiProvider } from "./privy-provider";
 import { ErrorBoundary } from "./error-boundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <PrivyWagmiProvider>{children}</PrivyWagmiProvider>
+        <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <PrivyWagmiProvider>{children}</PrivyWagmiProvider>
+        </NextThemesProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

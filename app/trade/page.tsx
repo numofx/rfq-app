@@ -7,6 +7,8 @@ import { AppLayout, CardWrapper, ContentLayout } from "@/components/layout/page-
 import { AppBg } from "@/components/ui/app-bg";
 import { supabase } from "@/lib/supabase/client";
 
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+
 type MarketId = "spot" | "june30-2026" | "dec31-2026";
 
 interface MarketOption {
@@ -148,9 +150,11 @@ export default function TradePage() {
   };
 
   const headerRight = (
-    <div className="relative">
-      <button
-        type="button"
+    <div className="flex items-center gap-3">
+      <ThemeToggle />
+      <div className="relative">
+        <button
+          type="button"
         onClick={() => setIsAccountMenuOpen((prev) => !prev)}
         className="flex h-[42px] w-[42px] items-center justify-center rounded-full border border-border/70 bg-panel-2/70 text-text ring-1 ring-white/10 hover:bg-panel-2"
         aria-label="Open account menu"
@@ -206,6 +210,7 @@ export default function TradePage() {
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   );
 

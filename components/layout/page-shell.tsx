@@ -26,7 +26,6 @@ export function AppLayout({
   headerCenter,
   headerRight,
   logoLink = "/",
-  logoSrc = "/numo_logo_white.png",
   hideLogo = false,
   showLogoSuffix = true,
   logoSize = "default",
@@ -43,7 +42,8 @@ export function AppLayout({
               <Link href={logoLink} className="shrink-0">
                 <div className="flex items-center gap-2">
                   <div className={cn("relative", logoContainerClass)}>
-                    <Image src={logoSrc} alt="Numo" fill className="object-contain object-left" priority />
+                    <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
+                    <Image src="/numo_logo_white.png" alt="Numo" fill className="hidden dark:block object-contain object-left" priority />
                   </div>
                   {showLogoSuffix ? (
                     <>
