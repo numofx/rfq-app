@@ -2,7 +2,7 @@ import { BarChart2 } from "lucide-react";
 
 export function BalanceHeader() {
   return (
-    <div className="mb-6 mt-8 md:mt-12">
+    <div className="mb-6 mt-4">
       <h2 className="text-[15px] font-medium text-brand">Total balance</h2>
       <div className="mt-1 flex items-center gap-3">
         <span className="text-[28px] font-semibold text-[#133015] dark:text-white">0.00 USD</span>
