@@ -36,7 +36,7 @@ function SidebarItem({ icon: Icon, label, isActive, hasDropdown, isOpen, onClick
       )}
     >
       <div className="flex items-center gap-3 font-medium text-[14px]">
-        <Icon className={cn("h-[18px] w-[18px]", isActive ? "text-[#1A4B20] dark:text-green-400" : "text-[#7B8B7D] dark:text-slate-400")} />
+        <Icon className={cn("h-[18px] w-[18px]", isActive ? "text-brand" : "text-[#7B8B7D] dark:text-slate-400")} />
         <span>{label}</span>
       </div>
       {hasDropdown && (
@@ -71,7 +71,7 @@ function SubItem({ icon: Icon, label, isActive }: { icon: React.ElementType, lab
       "flex items-center gap-3 rounded-xl px-4 py-2 text-[13px] font-medium transition-colors",
       isActive ? "text-[#133015] dark:text-white" : "text-[#4F5B51] dark:text-slate-300 hover:bg-[#EEF1EB]/50 dark:hover:bg-slate-800/50"
     )}>
-      <Icon className="h-4 w-4 text-[#7B8B7D] dark:text-slate-400" />
+      <Icon className={cn("h-4 w-4", isActive ? "text-brand" : "text-[#7B8B7D] dark:text-slate-400")} />
       <span>{label}</span>
     </Link>
   );
