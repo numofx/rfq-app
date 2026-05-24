@@ -15,10 +15,10 @@ function CurrencyRow({
   return (
     <div className="flex items-center justify-between py-2 cursor-pointer group">
       <div className="flex items-center gap-3">
-        <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black/10">
-          <Image src={flagSrc} alt={`${currencyName} flag`} width={24} height={24} className="h-full w-full object-cover" />
+        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-black/10">
+          <Image src={flagSrc} alt={`${currencyName} flag`} width={32} height={32} className="h-full w-full object-cover" />
         </div>
-        <span className="text-[14px] font-medium text-[#133015] dark:text-white">
+        <span className="text-[16px] font-medium text-[#133015] dark:text-white">
           {symbol}{amount}
         </span>
       </div>
