@@ -29,7 +29,6 @@ export function ActionPills() {
       <ActionPill label="Send" variant="primary" />
       <ActionPill label="Add money" />
       <ActionPill label="Request" hasDropdown />
-      <ActionPill label="Upload" />
     </div>
   );
 }

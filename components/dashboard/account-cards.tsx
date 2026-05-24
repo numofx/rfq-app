@@ -32,20 +32,18 @@ export function AccountCards() {
     <div className="grid grid-cols-1 gap-4 md:gap-6 mb-10">
       
       {/* Main Account Card */}
-      <div className="relative flex flex-col overflow-hidden rounded-[24px] bg-[#F1F3ED] dark:bg-[#181818] min-h-[300px]">
+      <div className="relative flex flex-col overflow-hidden rounded-[24px] bg-[#F1F3ED] dark:bg-[#181818]">
 
         
         {/* Card Content Area */}
         <div className="relative flex-1 bg-[#F1F3ED] dark:bg-[#181818] px-6 pb-6 pt-8">
           <h3 className="text-[20px] font-semibold text-[#133015] dark:text-white">Main account</h3>
           <p className="text-[13px] text-[#4F5B51] dark:text-slate-400 mt-1 mb-6">
-            $0.00 • 5 currencies
+            $0.00 • 2 currencies
           </p>
 
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-8">
-            <CurrencyRow flagSrc="/assets/us-flag.svg" currencyName="Australia" symbol="A$" amount="0.00" />
-            <CurrencyRow flagSrc="/assets/us-flag.svg" currencyName="EU" symbol="€" amount="0.00" />
-            <CurrencyRow flagSrc="/assets/ng-flag.svg" currencyName="Kenya" symbol="Ksh" amount="0" />
+            <CurrencyRow flagSrc="/assets/us-flag.svg" currencyName="United States" symbol="$" amount="0.00" />
             <CurrencyRow flagSrc="/assets/ng-flag.svg" currencyName="Nigeria" symbol="₦" amount="0.00" />
           </div>
 
