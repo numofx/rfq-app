@@ -83,7 +83,7 @@ export default function TestPrivyPage() {
 
         <div className="mt-8">
           <a
-            href="/trade"
+            href="/dashboard"
             className="inline-block bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90"
           >
             Go to App

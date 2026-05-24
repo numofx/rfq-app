@@ -90,7 +90,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         
         {/* Logo */}
         <div className="mb-8 pl-4">
-          <Link href="/" className="flex items-center">
+          <Link href="/dashboard" className="flex items-center">
             <div className="relative h-[42px] w-[154px]">
               <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
               <Image src="/numo_logo_white.png" alt="Numo" fill className="hidden dark:block object-contain object-left" priority />
@@ -124,10 +124,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <header className="flex h-16 items-center justify-end px-6 md:px-10 shrink-0">
           <div className="flex items-center gap-3 mt-4">
             <ThemeToggle />
-            <button
-              type="button"
+            <Link
+              href="/profile"
               className="flex h-[42px] w-[42px] items-center justify-center rounded-full border border-[#EFEFEF] dark:border-slate-800 bg-white dark:bg-[#0A0A0A] text-[#133015] dark:text-white ring-1 ring-black/5 dark:ring-white/10 hover:bg-[#F8F9F7] dark:hover:bg-slate-800 transition-colors"
-              aria-label="Open account menu"
+              aria-label="Open profile"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -142,7 +142,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 <circle cx="12" cy="8" r="4.2" />
                 <path d="M4.5 20c1.6-3.1 4.4-4.8 7.5-4.8s5.9 1.7 7.5 4.8" />
               </svg>
-            </button>
+            </Link>
           </div>
         </header>
 

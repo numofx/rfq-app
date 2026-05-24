@@ -165,7 +165,7 @@ export default function HomePage() {
       .getSession()
       .then(({ data }) => {
         if (data.session) {
-          router.replace("/trade");
+          router.replace("/dashboard");
         }
       })
       .catch(() => {});
@@ -354,7 +354,7 @@ export default function HomePage() {
         return;
       }
 
-      router.push("/trade");
+      router.push("/dashboard");
     } catch (error) {
       setLoginErrorField("password");
       setLoginErrorMessage("Invalid password");
@@ -544,13 +544,13 @@ export default function HomePage() {
     <AppLayout
       headerCenter={headerTabs}
       headerRight={headerRight}
-      logoSrc="/numo_logo_white.png"
+      logoSrc={isPremiumAuthView ? "/numo.png" : "/numo_logo_white.png"}
       hideLogo={isPremiumAuthView}
       showLogoSuffix={false}
       logoSize="large"
       className={
         isPremiumAuthView
-          ? "relative overflow-hidden bg-[#05070a] text-white before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.06),_transparent_55%)]"
+          ? "relative overflow-hidden bg-white text-black before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_top,_rgba(0,0,0,0.02),_transparent_55%)]"
           : undefined
       }
     >
@@ -735,7 +735,7 @@ export default function HomePage() {
 
                   <button
                     type="button"
-                    onClick={() => router.push("/trade")}
+                    onClick={() => router.push("/dashboard")}
                     className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
                   >
                     Finish Setup &rarr;
@@ -788,19 +788,19 @@ export default function HomePage() {
             >
             {view === "login" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
-                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
                         Log in
                       </h1>
-                      <p className="text-sm text-white/70">Lock in exchange rates ahead of time.</p>
+                      <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
                     </div>
                   </div>
 
@@ -820,10 +820,10 @@ export default function HomePage() {
                           setLoginErrorMessage("");
                           setAuthDebugInfo("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
+                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
                           isLoginEmailError
-                            ? "border-[#b42318] bg-[#2a1215]"
-                            : "border-white/10 bg-white/5 hover:border-white/15"
+                            ? "border-red-500 bg-red-50"
+                            : "border-black/10 bg-black/[0.02] hover:border-black/20"
                         }`}
                       />
                       {isLoginEmailError ? <p className="mt-2 text-[12px] text-[#fca5a5]">{loginErrorMessage}</p> : null}
@@ -836,8 +836,8 @@ export default function HomePage() {
                       <div
                         className={`flex h-12 items-center rounded-lg border px-3 transition-colors ${
                           isLoginPasswordError
-                            ? "border-[#b42318] bg-[#2a1215]"
-                            : "border-white/10 bg-white/5 hover:border-white/15 focus-within:border-white/20"
+                            ? "border-red-500 bg-red-50"
+                            : "border-black/10 bg-black/[0.02] hover:border-black/20 focus-within:border-black/30"
                         }`}
                       >
                         <input
@@ -851,12 +851,12 @@ export default function HomePage() {
                             setLoginErrorMessage("");
                             setAuthDebugInfo("");
                           }}
-                          className="h-full w-full bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[13px] text-black placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword((prev) => !prev)}
-                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-white/65 hover:text-white/85"
+                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-black/10 bg-white text-black/60 hover:text-black/80"
                           aria-label={showPassword ? "Hide password" : "Show password"}
                         >
                           <svg
@@ -883,27 +883,27 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       Log in
                     </button>
                   </form>
 
-                  {statusMessage ? <p className="text-[12px] text-[#9ca3af]">{statusMessage}</p> : null}
-                  {authDebugInfo ? <p className="text-[11px] text-amber-300/90">{authDebugInfo}</p> : null}
+                  {statusMessage ? <p className="text-[12px] text-gray-500">{statusMessage}</p> : null}
+                  {authDebugInfo ? <p className="text-[11px] text-amber-600/90">{authDebugInfo}</p> : null}
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="mt-3 w-full text-right text-xs text-white/55 transition hover:text-white"
+                    className="mt-3 w-full text-right text-xs text-black/50 transition hover:text-black"
                   >
                     Forgot your password?
                   </button>
                   <p className="mt-5 flex items-baseline justify-center gap-2">
-                    <span className="text-xs text-white/55">New to Numo?</span>
+                    <span className="text-xs text-black/50">New to Numo?</span>
                     <button
                       type="button"
                       onClick={() => setView("signup")}
-                      className="text-xs font-medium text-white/80 underline underline-offset-4 transition hover:text-white"
+                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-black"
                     >
                       Create account
                     </button>
@@ -912,19 +912,19 @@ export default function HomePage() {
               </>
             ) : view === "signup" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
-                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
                         Create account
                       </h1>
-                      <p className="text-sm text-white/70">Lock in exchange rates ahead of time.</p>
+                      <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
                     </div>
                   </div>
 
@@ -940,7 +940,7 @@ export default function HomePage() {
                           placeholder="Enter your first name"
                           value={firstName}
                           onChange={(event) => setFirstName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-[13px] text-white placeholder:text-white/35 hover:border-white/15 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                          className="h-12 w-full rounded-lg border border-black/10 bg-black/[0.02] px-3 text-[13px] text-black placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                         />
                       </div>
                       <div>
@@ -953,7 +953,7 @@ export default function HomePage() {
                           placeholder="Enter your last name"
                           value={lastName}
                           onChange={(event) => setLastName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-[13px] text-white placeholder:text-white/35 hover:border-white/15 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                          className="h-12 w-full rounded-lg border border-black/10 bg-black/[0.02] px-3 text-[13px] text-black placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                         />
                       </div>
                     </div>
@@ -972,8 +972,8 @@ export default function HomePage() {
                           setSignupEmail(event.target.value);
                           setAuthError("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
-                          authError ? "border-[#b42318] bg-[#2a1215]" : "border-white/10 bg-white/5 hover:border-white/15"
+                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
+                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-black/[0.02] hover:border-black/20"
                         }`}
                       />
                     </div>
@@ -981,19 +981,19 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Checking..." : "Create account"}
                     </button>
                   </form>
 
-                  {authError ? <p className="text-[12px] text-[#fca5a5]">{authError}</p> : null}
+                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
                   <p className="mt-5 flex items-baseline justify-center gap-2">
-                    <span className="text-xs text-white/55">Already have an account?</span>
+                    <span className="text-xs text-black/50">Already have an account?</span>
                     <button
                       type="button"
                       onClick={() => setView("login")}
-                      className="text-xs font-medium text-white/80 underline underline-offset-4 transition hover:text-white"
+                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-black"
                     >
                       Log in
                     </button>
@@ -1002,32 +1002,32 @@ export default function HomePage() {
               </>
             ) : view === "verify" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
-                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
                         Verify your email
                       </h1>
-                      <p className="text-sm text-white/70">Confirm your address to finish account setup</p>
+                      <p className="text-sm text-black/60">Confirm your address to finish account setup</p>
                     </div>
                   </div>
 
-                  <p className="text-[14px] leading-[1.6] text-white/70">
+                  <p className="text-[14px] leading-[1.6] text-black/60">
                     Check{" "}
-                    <span className="font-semibold text-white">{signupEmail.trim() || "your inbox"}</span>{" "}
+                    <span className="font-semibold text-black">{signupEmail.trim() || "your inbox"}</span>{" "}
                     for the verification link, then return here to continue.
                   </p>
 
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
+                    className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px"
                   >
                     Resend verification email
                   </button>
@@ -1035,37 +1035,37 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleVerificationContinue}
-                    className="text-[13px] font-medium text-white/65 transition hover:text-white"
+                    className="text-[13px] font-medium text-black/50 transition hover:text-black"
                   >
                     I&apos;ve verified &mdash; continue
                   </button>
 
-                  {statusMessage ? <p className="text-[12px] text-[#9dd6a8]">{statusMessage}</p> : null}
-                  {authError ? <p className="text-[12px] text-[#fca5a5]">{authError}</p> : null}
+                  {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
+                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
                 </div>
               </>
             ) : (
               <>
-                <div className="space-y-5 rounded-[16px] border border-white/10 bg-[#0b0f14]/80 px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
-                        <Image src="/numo_logo_white.png" alt="Numo" fill className="object-contain" />
+                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
                         Create your password
                       </h1>
-                      <p className="text-sm text-white/70">Finish setting up your Numo account</p>
+                      <p className="text-sm text-black/60">Finish setting up your Numo account</p>
                     </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setView("signup")}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-[16px] text-white/85 transition hover:bg-white/10"
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-black/10 bg-black/[0.02] text-[16px] text-black/60 transition hover:bg-black/[0.05]"
                     aria-label="Back to sign up"
                   >
                     &larr;
@@ -1076,19 +1076,19 @@ export default function HomePage() {
                       <label htmlFor="new-password" className="sr-only">
                         Password
                       </label>
-                      <div className="flex h-12 items-center rounded-lg border border-white/10 bg-white/5 px-3 transition-colors hover:border-white/15 focus-within:border-white/20">
+                      <div className="flex h-12 items-center rounded-lg border border-black/10 bg-black/[0.02] px-3 transition-colors hover:border-black/20 focus-within:border-black/30">
                         <input
                           id="new-password"
                           type={showCreatePassword ? "text" : "password"}
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[13px] text-black placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCreatePassword((prev) => !prev)}
-                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-white/65 hover:text-white/85"
+                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-black/10 bg-white text-black/60 hover:text-black/80"
                           aria-label={showCreatePassword ? "Hide password" : "Show password"}
                         >
                           <svg
@@ -1112,14 +1112,14 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Creating..." : "Continue →"}
                     </button>
                   </form>
 
-                  {authError ? <p className="text-[12px] text-[#fca5a5]">{authError}</p> : null}
-                  {statusMessage ? <p className="text-[12px] text-[#9dd6a8]">{statusMessage}</p> : null}
+                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
+                  {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
                 </div>
               </>
             )}
@@ -1150,13 +1150,13 @@ export default function HomePage() {
 
           {isPremiumAuthView ? (
             <footer className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-              <div className={`${containerClass} flex items-end justify-between text-[10px] text-white/35`}>
+              <div className={`${containerClass} flex items-end justify-between text-[10px] text-black/40`}>
                 <div className="pointer-events-auto flex items-center gap-2">
-                  <a href="#" className="hover:text-white/55">
+                  <a href="#" className="hover:text-black/60">
                     Privacy
                   </a>
                   <span aria-hidden="true">&middot;</span>
-                  <a href="#" className="hover:text-white/55">
+                  <a href="#" className="hover:text-black/60">
                     Cookie
                   </a>
                 </div>

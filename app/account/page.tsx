@@ -311,7 +311,7 @@ export default function AccountPage() {
                   </p>
                 </div>
                 <Link
-                  href="/trade"
+                  href="/dashboard"
                   className="rounded-full border border-border/70 bg-panel-2/80 px-4 py-2 text-[13px] font-medium text-text transition hover:bg-panel-2"
                 >
                   Back to trading
