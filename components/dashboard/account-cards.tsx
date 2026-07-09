@@ -15,8 +15,8 @@ function CurrencyRow({
   return (
     <div className="flex items-center justify-between py-2 cursor-pointer group">
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-black/10">
-          <Image src={iconSrc} alt={`${currencyName} token`} width={32} height={32} className="h-full w-full object-cover" />
+        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-black/10">
+          <Image src={iconSrc} alt={`${currencyName} token`} width={48} height={48} className="h-full w-full object-cover" />
         </div>
         <span className="text-[16px] font-medium text-[#133015] dark:text-white">
           {symbol}{amount}
