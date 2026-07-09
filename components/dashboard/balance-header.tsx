@@ -5,7 +5,7 @@ export function BalanceHeader() {
     <div className="mb-6 mt-4">
       <h2 className="text-[15px] font-medium text-brand">Total balance</h2>
       <div className="mt-1 flex items-center gap-3">
-        <span className="text-[28px] font-semibold text-[#133015] dark:text-white">0.00 USD</span>
+        <span className="text-[28px] font-semibold text-[#133015] dark:text-white">0.00 USDC</span>
         <button 
           className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EEF1EB] dark:bg-slate-800 text-[#4F5B51] dark:text-slate-300 hover:bg-[#E2E6DF] dark:hover:bg-slate-700 transition-colors"
           aria-label="View analytics"

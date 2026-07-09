@@ -1,16 +1,12 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
 import Link from "next/link";
-import { 
-  Home, 
-  List, 
-  ArrowRightLeft, 
-  Calendar, 
-  RefreshCw, 
-  Receipt, 
-  Users, 
+import {
+  Home,
+  List,
+  ArrowRightLeft,
+  Users,
   ChevronDown,
   ChevronUp
 } from "lucide-react";
@@ -65,24 +61,10 @@ function SidebarItem({ icon: Icon, label, isActive, hasDropdown, isOpen, onClick
   );
 }
 
-function SubItem({ icon: Icon, label, isActive }: { icon: React.ElementType, label: string, isActive?: boolean }) {
-  return (
-    <Link href="#" className={cn(
-      "flex items-center gap-3 rounded-xl px-4 py-2 text-[13px] font-medium transition-colors",
-      isActive ? "text-[#133015] dark:text-white" : "text-[#4F5B51] dark:text-slate-300 hover:bg-[#EEF1EB]/50 dark:hover:bg-slate-800/50"
-    )}>
-      <Icon className={cn("h-4 w-4", isActive ? "text-brand" : "text-[#7B8B7D] dark:text-slate-400")} />
-      <span>{label}</span>
-    </Link>
-  );
-}
-
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import Image from "next/image";
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
-  const [isPaymentsOpen, setIsPaymentsOpen] = useState(true);
-
   return (
     <div className="flex min-h-screen bg-white dark:bg-[#0A0A0A]">
       {/* Sidebar */}
@@ -102,17 +84,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <SidebarItem icon={Home} label="Home" isActive href="#" />
           <SidebarItem icon={List} label="Transactions" href="#" />
           
-          <SidebarItem 
-            icon={ArrowRightLeft} 
-            label="Payments" 
-            hasDropdown 
-            isOpen={isPaymentsOpen}
-            onClick={() => setIsPaymentsOpen(!isPaymentsOpen)}
-          >
-            <SubItem icon={Calendar} label="Scheduled" />
-            <SubItem icon={RefreshCw} label="Direct Debits" />
-            <SubItem icon={Receipt} label="Payment requests" />
-          </SidebarItem>
+          <SidebarItem icon={ArrowRightLeft} label="Swap" href="#" />
 
           <SidebarItem icon={Users} label="Recipients" href="#" />
         </nav>
