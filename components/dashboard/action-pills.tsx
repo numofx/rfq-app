@@ -43,8 +43,7 @@ export function ActionPills() {
   return (
     <div className="mb-8 flex flex-wrap items-center gap-3">
       <ActionPill label="Swap" variant="primary" href="/send" />
-      <ActionPill label="Deposit" />
-      <ActionPill label="Request" hasDropdown />
+      <ActionPill label="Connect Wallet" />
     </div>
   );
 }

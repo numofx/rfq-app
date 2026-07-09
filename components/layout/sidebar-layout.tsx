@@ -6,7 +6,7 @@ import {
   Home,
   List,
   ArrowRightLeft,
-  Users,
+  Landmark,
   ChevronDown,
   ChevronUp
 } from "lucide-react";
@@ -85,8 +85,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <SidebarItem icon={List} label="Transactions" href="#" />
           
           <SidebarItem icon={ArrowRightLeft} label="Swap" href="#" />
-
-          <SidebarItem icon={Users} label="Recipients" href="#" />
+          <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" />
         </nav>
       </aside>
 
