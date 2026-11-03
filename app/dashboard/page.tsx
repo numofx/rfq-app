@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { FileText } from "lucide-react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { BalanceHeader } from "@/components/dashboard/balance-header";
 import { AccountCards } from "@/components/dashboard/account-cards";
+import { MoveMoney } from "@/components/dashboard/move-money";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
 
 export default function TradePage() {
@@ -32,12 +32,7 @@ export default function TradePage() {
           <h1 className="text-[21px] text-[#141414] dark:text-white">
             {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
           </h1>
-          <Link
-            href="/send"
-            className="flex h-9 shrink-0 items-center rounded-full bg-[#141414] px-4 text-[14px] text-white transition-colors hover:bg-black dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
-          >
-            Swap
-          </Link>
+          <MoveMoney />
         </div>
 
         <div className="mt-10">
