@@ -22,7 +22,7 @@ const FIELD_INPUT =
   "w-full min-w-0 bg-transparent text-[15px] text-[#141414] outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/35";
 
 /** Mounted only while the dialog is open, so closing it clears the form. */
-function PayForm() {
+function LockRateForm() {
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [description, setDescription] = useState("");
@@ -31,8 +31,8 @@ function PayForm() {
 
   const value = Number(amount);
   const exceedsBalance = value > Number(account.balance);
-  // Nothing sends a payment yet and every balance is a placeholder 0.00, so this stays false.
-  const canPay = value > 0 && !exceedsBalance && recipient.trim() !== "";
+  // Nothing locks a rate yet and every balance is a placeholder 0.00, so this stays false.
+  const canLockRate = value > 0 && !exceedsBalance && recipient.trim() !== "";
 
   return (
     <form
@@ -64,12 +64,12 @@ function PayForm() {
       </p>
 
       <div className="mt-4">
-        <label htmlFor="pay-to" className={FIELD_LABEL}>
+        <label htmlFor="lock-rate-to" className={FIELD_LABEL}>
           To
         </label>
         <div className={FIELD_LINE}>
           <input
-            id="pay-to"
+            id="lock-rate-to"
             placeholder="Email, phone, ID, or @handle"
             autoComplete="off"
             value={recipient}
@@ -80,13 +80,13 @@ function PayForm() {
       </div>
 
       <div className="mt-6">
-        <span id="pay-from" className={FIELD_LABEL}>
+        <span id="lock-rate-from" className={FIELD_LABEL}>
           From
         </span>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
-            <button type="button" aria-labelledby="pay-from pay-from-value" className={cn(FIELD_LINE, "justify-between outline-none")}>
-              <span id="pay-from-value" className="text-[15px] text-[#141414] dark:text-white">
+            <button type="button" aria-labelledby="lock-rate-from lock-rate-from-value" className={cn(FIELD_LINE, "justify-between outline-none")}>
+              <span id="lock-rate-from-value" className="text-[15px] text-[#141414] dark:text-white">
                 {account.currency}
                 <span className="ml-2 text-black/55 dark:text-white/60">
                   {account.symbol}
@@ -121,12 +121,12 @@ function PayForm() {
       </div>
 
       <div className="mt-6">
-        <label htmlFor="pay-description" className={FIELD_LABEL}>
+        <label htmlFor="lock-rate-description" className={FIELD_LABEL}>
           Description
         </label>
         <div className={FIELD_LINE}>
           <input
-            id="pay-description"
+            id="lock-rate-description"
             placeholder="What's this for?"
             maxLength={DESCRIPTION_MAX}
             value={description}
@@ -141,18 +141,18 @@ function PayForm() {
 
       <button
         type="submit"
-        disabled={!canPay}
+        disabled={!canLockRate}
         className="mt-8 h-12 w-full rounded-full bg-[#141414] text-[15px] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#EDE5DA] disabled:text-black/45 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
       >
-        Pay
+        Lock rate
       </button>
     </form>
   );
 }
 
-/** The dashboard's "Move money" button: its menu of actions and the Pay dialog. */
+/** The dashboard's "Move money" button: its menu of actions and the Lock rate dialog. */
 export function MoveMoney() {
-  const [isPayOpen, setIsPayOpen] = useState(false);
+  const [isLockRateOpen, setIsLockRateOpen] = useState(false);
 
   return (
     <>
@@ -169,10 +169,10 @@ export function MoveMoney() {
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={8} className={cn(MENU_CONTENT, "w-[240px]")}>
             <DropdownMenu.Item
-              onSelect={() => setIsPayOpen(true)}
+              onSelect={() => setIsLockRateOpen(true)}
               className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
             >
-              Pay
+              Lock rate
             </DropdownMenu.Item>
             {/* The sidebar that also links to Swap is hidden on phones. */}
             <DropdownMenu.Item
@@ -193,15 +193,15 @@ export function MoveMoney() {
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <Dialog.Root open={isPayOpen} onOpenChange={setIsPayOpen}>
+      <Dialog.Root open={isLockRateOpen} onOpenChange={setIsLockRateOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/20" />
           <Dialog.Content
             aria-describedby={undefined}
             className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white p-6 outline-none dark:bg-[#1A1A1A] sm:p-8"
           >
-            <Dialog.Title className="text-center text-[16px] text-[#141414] dark:text-white">Pay</Dialog.Title>
-            <PayForm />
+            <Dialog.Title className="text-center text-[16px] text-[#141414] dark:text-white">Lock rate</Dialog.Title>
+            <LockRateForm />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
