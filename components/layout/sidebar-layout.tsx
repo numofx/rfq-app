@@ -1,122 +1,192 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useTheme } from "next-themes";
 import {
-  Home,
-  List,
   ArrowRightLeft,
-  Landmark,
   ChevronDown,
-  ChevronUp
+  Home,
+  Landmark,
+  List,
+  LogOut,
+  Moon,
+  Settings,
+  Sun,
+  User,
 } from "lucide-react";
+import { useAccountUser } from "@/lib/hooks/useAccountUser";
+import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface SidebarItemProps {
   icon: React.ElementType;
   label: string;
+  href: string;
   isActive?: boolean;
-  hasDropdown?: boolean;
-  isOpen?: boolean;
-  onClick?: () => void;
-  href?: string;
-  children?: React.ReactNode;
+  isSoon?: boolean;
 }
 
-function SidebarItem({ icon: Icon, label, isActive, hasDropdown, isOpen, onClick, href, children }: SidebarItemProps) {
-  const content = (
-    <div
-      className={cn(
-        "flex w-full items-center justify-between rounded-full px-4 py-2.5 transition-colors",
-        isActive ? "bg-[#EEF1EB] dark:bg-slate-800 text-[#133015] dark:text-white" : "text-[#4F5B51] dark:text-slate-300 hover:bg-[#EEF1EB]/50 dark:hover:bg-slate-800/50"
-      )}
-    >
-      <div className="flex items-center gap-3 font-medium text-[14px]">
-        <Icon className={cn("h-[18px] w-[18px]", isActive ? "text-brand" : "text-[#7B8B7D] dark:text-slate-400")} />
-        <span>{label}</span>
-      </div>
-      {hasDropdown && (
-        isOpen ? <ChevronUp className="h-4 w-4 text-[#7B8B7D] dark:text-slate-400" /> : <ChevronDown className="h-4 w-4 text-[#7B8B7D] dark:text-slate-400" />
-      )}
-    </div>
+function SidebarItem({ icon: Icon, label, href, isActive, isSoon }: SidebarItemProps) {
+  const className = cn(
+    "flex h-[38px] items-center gap-3 rounded-lg px-3 text-[14px] transition-colors",
+    isActive
+      ? "bg-white text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-white/10 dark:text-white"
+      : "text-[#5F5F5B] dark:text-white/60",
+    !isActive && !isSoon && "hover:bg-white/60 hover:text-[#141414] dark:hover:bg-white/5 dark:hover:text-white"
   );
+
+  const inner = (
+    <>
+      <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={1.75} />
+      <span className="flex-1">{label}</span>
+      {isSoon && (
+        <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-[#6F6F6B] dark:bg-white/10 dark:text-white/60">
+          Soon
+        </span>
+      )}
+    </>
+  );
+
+  if (isSoon) {
+    return <div className={cn(className, "cursor-default")}>{inner}</div>;
+  }
 
   return (
-    <div className="mb-1">
-      {href ? (
-        <Link href={href} onClick={onClick} className="block w-full">
-          {content}
-        </Link>
-      ) : (
-        <button type="button" onClick={onClick} className="block w-full">
-          {content}
-        </button>
-      )}
-      {hasDropdown && isOpen && (
-        <div className="mt-1 flex flex-col pl-7 space-y-1">
-          {children}
-        </div>
-      )}
-    </div>
+    <Link href={href} className={className} aria-current={isActive ? "page" : undefined}>
+      {inner}
+    </Link>
   );
 }
 
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import Image from "next/image";
+const menuItemClass =
+  "flex h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[14px] text-[#141414] outline-none data-[highlighted]:bg-black/5 dark:text-white dark:data-[highlighted]:bg-white/10";
+
+function AccountMenu({ compact = false }: { compact?: boolean }) {
+  const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
+  const user = useAccountUser();
+
+  const handleLogout = async () => {
+    await supabase?.auth.signOut();
+    router.push("/");
+  };
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label="Open account menu"
+          className={cn(
+            "flex items-center gap-3 rounded-lg text-left outline-none transition-colors hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-black/20 dark:hover:bg-white/5 dark:focus-visible:ring-white/30",
+            compact ? "p-1" : "w-full p-2"
+          )}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white dark:border-white/10 dark:bg-white/10">
+            <Image src="/favicon-32x32.png" alt="" width={20} height={20} />
+          </span>
+          {!compact && (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] text-[#141414] dark:text-white">
+                  {user?.teamName ?? "Numo"}
+                </span>
+                {user?.email && (
+                  <span className="block truncate text-[13px] text-[#6F6F6B] dark:text-white/60">{user.email}</span>
+                )}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-[#5F5F5B] dark:text-white/60" />
+            </>
+          )}
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          side={compact ? "bottom" : "top"}
+          align={compact ? "end" : "start"}
+          sideOffset={8}
+          className="z-50 w-[228px] rounded-xl border border-black/10 bg-white p-1.5 shadow-lg dark:border-white/10 dark:bg-[#1A1A1A]"
+        >
+          <DropdownMenu.Item asChild className={menuItemClass}>
+            <Link href="/profile">
+              <User className="h-4 w-4" strokeWidth={1.75} />
+              Profile
+            </Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            className={menuItemClass}
+            onSelect={(event) => {
+              event.preventDefault();
+              setTheme(resolvedTheme === "dark" ? "light" : "dark");
+            }}
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className="h-4 w-4" strokeWidth={1.75} />
+            ) : (
+              <Moon className="h-4 w-4" strokeWidth={1.75} />
+            )}
+            {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-black/5 dark:bg-white/10" />
+          <DropdownMenu.Item className={menuItemClass} onSelect={handleLogout}>
+            <LogOut className="h-4 w-4" strokeWidth={1.75} />
+            Log out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function Logo() {
+  return (
+    <Link href="/dashboard" className="relative block h-[34px] w-[124px]">
+      <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
+      <Image src="/numo_logo_white.png" alt="Numo" fill className="hidden object-contain object-left dark:block" priority />
+    </Link>
+  );
+}
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
-    <div className="flex min-h-screen bg-white dark:bg-[#0A0A0A]">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#F3F3F1] bg-[radial-gradient(ellipse_60%_30%_at_20%_15%,rgba(255,255,255,0.7),transparent),radial-gradient(ellipse_70%_25%_at_75%_55%,rgba(255,255,255,0.55),transparent),radial-gradient(ellipse_60%_25%_at_15%_85%,rgba(255,255,255,0.6),transparent)] bg-[length:260px_100%] bg-no-repeat dark:bg-[#0A0A0A] dark:bg-none md:flex-row">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col overflow-y-auto border-r border-[#EFEFEF] dark:border-slate-800 bg-white dark:bg-[#0A0A0A] px-4 py-6 md:flex">
-        
-        {/* Logo */}
-        <div className="mb-8 pl-4">
-          <Link href="/dashboard" className="flex items-center">
-            <div className="relative h-[42px] w-[154px]">
-              <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
-              <Image src="/numo_logo_white.png" alt="Numo" fill className="hidden dark:block object-contain object-left" priority />
-            </div>
-          </Link>
+      <aside className="hidden w-[260px] shrink-0 flex-col overflow-y-auto px-4 pb-4 pt-8 md:flex">
+        <div className="mb-10 pl-3">
+          <Logo />
         </div>
 
-        <nav className="flex-1 space-y-1">
-          <SidebarItem icon={Home} label="Home" isActive href="#" />
-          <SidebarItem icon={List} label="Transactions" href="#" />
-          
-          <SidebarItem icon={ArrowRightLeft} label="Swap" href="#" />
-          <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" />
+        <nav className="flex-1">
+          <div className="space-y-0.5">
+            <SidebarItem icon={Home} label="Home" href="/dashboard" isActive={pathname === "/dashboard"} />
+            <SidebarItem icon={List} label="Transactions" href="#" />
+            <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/account"} />
+          </div>
+
+          <p className="mb-2 mt-8 px-3 text-[13px] text-[#6F6F6B] dark:text-white/50">Products</p>
+          <div className="space-y-0.5">
+            <SidebarItem icon={ArrowRightLeft} label="Swap" href="/send" isActive={pathname === "/send"} />
+            <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" isSoon />
+          </div>
         </nav>
+
+        <AccountMenu />
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 md:pl-[260px] flex flex-col">
-        {/* Top Header */}
-        <header className="flex h-16 items-center justify-end px-6 md:px-10 shrink-0">
-          <div className="flex items-center gap-3 mt-4">
-            <ThemeToggle />
-            <Link
-              href="/profile"
-              className="flex h-[42px] w-[42px] items-center justify-center rounded-full border border-[#EFEFEF] dark:border-slate-800 bg-white dark:bg-[#0A0A0A] text-[#133015] dark:text-white ring-1 ring-black/5 dark:ring-white/10 hover:bg-[#F8F9F7] dark:hover:bg-slate-800 transition-colors"
-              aria-label="Open profile"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-[20px] w-[20px]"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="8" r="4.2" />
-                <path d="M4.5 20c1.6-3.1 4.4-4.8 7.5-4.8s5.9 1.7 7.5 4.8" />
-              </svg>
-            </Link>
-          </div>
-        </header>
+      {/* Mobile top bar */}
+      <header className="flex h-14 shrink-0 items-center justify-between bg-white px-4 dark:bg-[#111111] md:hidden">
+        <Logo />
+        <AccountMenu compact />
+      </header>
 
+      {/* Main Content */}
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-[#111111] md:mr-2.5 md:mt-2.5 md:rounded-t-[20px] md:border md:border-b-0 md:border-black/[0.06] dark:md:border-white/10">
         {children}
       </main>
     </div>

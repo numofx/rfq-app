@@ -23,7 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <PrivyWagmiProvider>{children}</PrivyWagmiProvider>
         </NextThemesProvider>
       </QueryClientProvider>

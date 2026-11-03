@@ -1,33 +1,63 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { FileText } from "lucide-react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { BalanceHeader } from "@/components/dashboard/balance-header";
-import { ActionPills } from "@/components/dashboard/action-pills";
 import { AccountCards } from "@/components/dashboard/account-cards";
-import { FileText } from "lucide-react";
+import { useAccountUser } from "@/lib/hooks/useAccountUser";
 
 export default function TradePage() {
+  const user = useAccountUser();
+
   return (
     <SidebarLayout>
-      <div className="max-w-[900px] px-6 py-4 md:px-10">
-        <BalanceHeader />
-        <ActionPills />
-        <AccountCards />
-
-        {/* Transactions Section */}
-        <div className="mt-2 flex items-center justify-between pb-4">
-          <h2 className="text-[22px] font-semibold text-[#133015] dark:text-white">Transactions</h2>
-          <button className="text-[13px] font-bold text-[#133015] dark:text-white underline decoration-2 underline-offset-4 hover:text-[#4F5B51] dark:hover:text-slate-300 transition-colors">
-            See all
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#F5F5F5] dark:bg-slate-800">
-            <FileText className="h-6 w-6 text-[#4F5B51] dark:text-slate-400" strokeWidth={1.5} />
+      <div className="mx-auto w-full max-w-[1240px] px-6 pb-16 pt-6 md:px-16">
+        {/* Welcome banner */}
+        <div className="flex items-center gap-4 rounded-xl border border-black/[0.08] p-3 dark:border-white/10">
+          <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#CFE6FF] to-[#6FB1F5]">
+            <Image src="/favicon-32x32.png" alt="" width={32} height={32} />
           </div>
-          <h3 className="mb-1.5 text-[16px] font-semibold text-[#133015] dark:text-white">No transactions yet</h3>
+          <div className="min-w-0 text-[15px]">
+            <p className="text-[#141414] dark:text-white">Welcome to Numo</p>
+            <p className="mt-0.5 text-[#6F6F6B] dark:text-white/60">
+              Your account is ready. Swap between USDC and cNGN.
+            </p>
+          </div>
         </div>
+
+        {/* Greeting */}
+        <div className="mt-9 flex items-center justify-between gap-4">
+          <h1 className="text-[21px] text-[#141414] dark:text-white">
+            {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
+          </h1>
+          <Link
+            href="/send"
+            className="flex h-9 shrink-0 items-center rounded-full bg-[#1C1C1C] px-4 text-[14px] text-white transition-colors hover:bg-black dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
+          >
+            Swap
+          </Link>
+        </div>
+
+        <div className="mt-10">
+          <BalanceHeader accountCreatedAt={user?.createdAt ?? null} />
+        </div>
+
+        <div className="mt-14">
+          <AccountCards />
+        </div>
+
+        {/* Transactions */}
+        <section className="mt-12">
+          <h2 className="text-[16px] text-[#141414] dark:text-white">Transactions</h2>
+          <div className="mt-5 flex flex-col items-center py-10 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#F5F5F3] dark:bg-white/5">
+              <FileText className="h-5 w-5 text-[#6F6F6B] dark:text-white/60" strokeWidth={1.5} />
+            </div>
+            <p className="text-[14px] text-[#6F6F6B] dark:text-white/60">No transactions yet</p>
+          </div>
+        </section>
       </div>
     </SidebarLayout>
   );

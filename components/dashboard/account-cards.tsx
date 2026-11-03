@@ -1,64 +1,28 @@
-import { ChevronRight, Plus } from "lucide-react";
 import Image from "next/image";
 
-function CurrencyRow({
-  iconSrc,
-  currencyName,
-  amount,
-  symbol
-}: {
-  iconSrc: string,
-  currencyName: string,
-  amount: string,
-  symbol: string
-}) {
-  return (
-    <div className="flex items-center justify-between py-2 cursor-pointer group">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-black/10">
-          <Image src={iconSrc} alt={`${currencyName} token`} width={48} height={48} className="h-full w-full object-cover" />
-        </div>
-        <span className="text-[16px] font-medium text-[#133015] dark:text-white">
-          {symbol}{amount}
-        </span>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted opacity-50 group-hover:opacity-100 transition-opacity" />
-    </div>
-  );
-}
+const ACCOUNTS = [
+  { iconSrc: "/tokens/usdc.svg", currency: "USDC", balance: "$0.00" },
+  { iconSrc: "/tokens/cngn.png", currency: "cNGN", balance: "₦0.00" },
+];
 
 export function AccountCards() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:gap-6 mb-10">
-      
-      {/* Main Account Card */}
-      <div className="relative flex flex-col overflow-hidden rounded-[24px] bg-[#F1F3ED] dark:bg-[#181818]">
+    <section>
+      <h2 className="text-[16px] text-[#141414] dark:text-white">Accounts</h2>
 
-        
-        {/* Card Content Area */}
-        <div className="relative flex-1 bg-[#F1F3ED] dark:bg-[#181818] px-6 pb-6 pt-8">
-          <h3 className="text-[20px] font-semibold text-[#133015] dark:text-white">Main account</h3>
-          <p className="text-[13px] text-[#4F5B51] dark:text-slate-400 mt-1 mb-6">
-            $0.00 • 2 currencies
-          </p>
-
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-8">
-            <CurrencyRow iconSrc="/tokens/usdc.svg" currencyName="USDC" symbol="$" amount="0.00" />
-            <CurrencyRow iconSrc="/tokens/cngn.png" currencyName="cNGN" symbol="₦" amount="0.00" />
+      <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        {ACCOUNTS.map(({ iconSrc, currency, balance }) => (
+          <div key={currency} className="flex items-center gap-4">
+            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-lg bg-[#F5F5F3] dark:bg-white/5">
+              <Image src={iconSrc} alt="" width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
+            </div>
+            <div>
+              <p className="text-[15px] text-[#141414] dark:text-white">{currency}</p>
+              <p className="mt-1 text-[14px] text-[#6F6F6B] dark:text-white/60">{balance}</p>
+            </div>
           </div>
-
-          <button className="flex h-8 items-center justify-center gap-2 rounded-full bg-[#E2E6DF] dark:bg-slate-800 px-4 text-[13px] font-semibold text-[#133015] dark:text-white transition-colors hover:bg-[#D4D9D0] dark:hover:bg-slate-700">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-            Account details
-          </button>
-        </div>
+        ))}
       </div>
-
-
-
-    </div>
+    </section>
   );
 }
