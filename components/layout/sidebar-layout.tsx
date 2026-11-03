@@ -35,8 +35,8 @@ function SidebarItem({ icon: Icon, label, href, isActive, isSoon }: SidebarItemP
     "flex h-[38px] items-center gap-3 rounded-lg px-3 text-[14px] transition-colors",
     isActive
       ? "bg-white text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-white/10 dark:text-white"
-      : "text-[#5F5F5B] dark:text-white/60",
-    !isActive && !isSoon && "hover:bg-white/60 hover:text-[#141414] dark:hover:bg-white/5 dark:hover:text-white"
+      : "text-black/60 dark:text-white/60",
+    !isActive && !isSoon && "hover:bg-[#E4DACC] hover:text-[#141414] dark:hover:bg-white/5 dark:hover:text-white"
   );
 
   const inner = (
@@ -44,7 +44,7 @@ function SidebarItem({ icon: Icon, label, href, isActive, isSoon }: SidebarItemP
       <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={1.75} />
       <span className="flex-1">{label}</span>
       {isSoon && (
-        <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-[#6F6F6B] dark:bg-white/10 dark:text-white/60">
+        <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-black/60 dark:bg-white/10 dark:text-white/60">
           Soon
         </span>
       )}
@@ -82,7 +82,7 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
           type="button"
           aria-label="Open account menu"
           className={cn(
-            "flex items-center gap-3 rounded-lg text-left outline-none transition-colors hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-black/20 dark:hover:bg-white/5 dark:focus-visible:ring-white/30",
+            "flex items-center gap-3 rounded-lg text-left outline-none transition-colors hover:bg-[#E4DACC] focus-visible:ring-2 focus-visible:ring-black/20 dark:hover:bg-white/5 dark:focus-visible:ring-white/30",
             compact ? "p-1" : "w-full p-2"
           )}
         >
@@ -96,10 +96,10 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
                   {user?.teamName ?? "Numo"}
                 </span>
                 {user?.email && (
-                  <span className="block truncate text-[13px] text-[#6F6F6B] dark:text-white/60">{user.email}</span>
+                  <span className="block truncate text-[13px] text-black/60 dark:text-white/60">{user.email}</span>
                 )}
               </span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-[#5F5F5B] dark:text-white/60" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" />
             </>
           )}
         </button>
@@ -155,7 +155,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#F3F3F1] bg-[radial-gradient(ellipse_60%_30%_at_20%_15%,rgba(255,255,255,0.7),transparent),radial-gradient(ellipse_70%_25%_at_75%_55%,rgba(255,255,255,0.55),transparent),radial-gradient(ellipse_60%_25%_at_15%_85%,rgba(255,255,255,0.6),transparent)] bg-[length:260px_100%] bg-no-repeat dark:bg-[#0A0A0A] dark:bg-none md:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#EDE5DA] dark:bg-[#0A0A0A] md:flex-row">
       {/* Sidebar */}
       <aside className="hidden w-[260px] shrink-0 flex-col overflow-y-auto px-4 pb-4 pt-8 md:flex">
         <div className="mb-10 pl-3">
@@ -169,7 +169,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/account"} />
           </div>
 
-          <p className="mb-2 mt-8 px-3 text-[13px] text-[#6F6F6B] dark:text-white/50">Products</p>
+          <p className="mb-2 mt-8 px-3 text-[13px] text-black/60 dark:text-white/50">Products</p>
           <div className="space-y-0.5">
             <SidebarItem icon={ArrowRightLeft} label="Swap" href="/send" isActive={pathname === "/send"} />
             <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" isSoon />
@@ -180,13 +180,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between bg-white px-4 dark:bg-[#111111] md:hidden">
+      <header className="flex h-14 shrink-0 items-center justify-between bg-[#F6F0E9] px-4 dark:bg-[#111111] md:hidden">
         <Logo />
         <AccountMenu compact />
       </header>
 
       {/* Main Content */}
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-[#111111] md:mr-2.5 md:mt-2.5 md:rounded-t-[20px] md:border md:border-b-0 md:border-black/[0.06] dark:md:border-white/10">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F6F0E9] dark:bg-[#111111] md:mr-2.5 md:mt-2.5 md:rounded-t-[20px] md:border md:border-b-0 md:border-black/10 dark:md:border-white/10">
         {children}
       </main>
     </div>

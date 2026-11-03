@@ -40,12 +40,12 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
     <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[15px] text-[#6F6F6B] dark:text-white/60">
+          <div className="flex items-center gap-2 text-[15px] text-black/55 dark:text-white/60">
             Available balance
             <Info className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
           </div>
           <p className="mt-2 text-[30px] leading-none text-[#141414] dark:text-white">
-            <span className="mr-2 text-[#8A8A86] dark:text-white/50">$</span>0.00
+            <span className="mr-2 text-black/40 dark:text-white/50">$</span>0.00
           </p>
         </div>
 
@@ -59,8 +59,8 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
               className={cn(
                 "rounded-lg px-3 py-1.5 text-[14px] transition-colors",
                 range === option
-                  ? "bg-[#F5F5F3] text-[#141414] dark:bg-white/10 dark:text-white"
-                  : "text-[#6F6F6B] hover:text-[#141414] dark:text-white/60 dark:hover:text-white"
+                  ? "bg-[#EDE5DA] text-[#141414] dark:bg-white/10 dark:text-white"
+                  : "text-black/55 hover:text-[#141414] dark:text-white/60 dark:hover:text-white"
               )}
             >
               {option}
@@ -71,7 +71,7 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
 
       {/* Balance history isn't tracked yet, so the chart shows the current flat $0.00 balance. */}
       <div
-        className="relative mt-8 h-[220px] text-[#D6D6D2] dark:text-white/15"
+        className="relative mt-8 h-[220px] text-black/20 dark:text-white/15"
         style={{
           backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
           backgroundSize: "36px 36px",
@@ -80,10 +80,10 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
         aria-label="Balance chart: $0.00 across the selected range"
       >
         {/* The line runs to the panel's left edge, which main clips. */}
-        <div className="absolute bottom-7 right-0 h-0.5 w-[100vw] bg-[#3A3A38] dark:bg-white/70" />
+        <div className="absolute bottom-7 right-0 h-0.5 w-[100vw] bg-[#141414] dark:bg-white/70" />
       </div>
 
-      <div className="mt-4 flex justify-between text-[13px] text-[#6F6F6B] dark:text-white/60">
+      <div className="mt-4 flex justify-between text-[13px] text-black/55 dark:text-white/60">
         {labels.map((label, index) => (
           <span key={index} suppressHydrationWarning className={cn(index % 2 === 1 && "hidden sm:inline")}>
             {label}

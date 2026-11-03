@@ -15,13 +15,13 @@ export default function TradePage() {
     <SidebarLayout>
       <div className="mx-auto w-full max-w-[1240px] px-6 pb-16 pt-6 md:px-16">
         {/* Welcome banner */}
-        <div className="flex items-center gap-4 rounded-xl border border-black/[0.08] p-3 dark:border-white/10">
-          <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#CFE6FF] to-[#6FB1F5]">
+        <div className="flex items-center gap-4 rounded-xl border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-transparent">
+          <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#E8F3FB] to-[#8EC9EE]">
             <Image src="/favicon-32x32.png" alt="" width={32} height={32} />
           </div>
           <div className="min-w-0 text-[15px]">
             <p className="text-[#141414] dark:text-white">Welcome to Numo</p>
-            <p className="mt-0.5 text-[#6F6F6B] dark:text-white/60">
+            <p className="mt-0.5 text-black/55 dark:text-white/60">
               Your account is ready. Swap between USDC and cNGN.
             </p>
           </div>
@@ -34,7 +34,7 @@ export default function TradePage() {
           </h1>
           <Link
             href="/send"
-            className="flex h-9 shrink-0 items-center rounded-full bg-[#1C1C1C] px-4 text-[14px] text-white transition-colors hover:bg-black dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
+            className="flex h-9 shrink-0 items-center rounded-full bg-[#141414] px-4 text-[14px] text-white transition-colors hover:bg-black dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
           >
             Swap
           </Link>
@@ -52,10 +52,10 @@ export default function TradePage() {
         <section className="mt-12">
           <h2 className="text-[16px] text-[#141414] dark:text-white">Transactions</h2>
           <div className="mt-5 flex flex-col items-center py-10 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#F5F5F3] dark:bg-white/5">
-              <FileText className="h-5 w-5 text-[#6F6F6B] dark:text-white/60" strokeWidth={1.5} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#EDE5DA] dark:bg-white/5">
+              <FileText className="h-5 w-5 text-black/55 dark:text-white/60" strokeWidth={1.5} />
             </div>
-            <p className="text-[14px] text-[#6F6F6B] dark:text-white/60">No transactions yet</p>
+            <p className="text-[14px] text-black/55 dark:text-white/60">No transactions yet</p>
           </div>
         </section>
       </div>
