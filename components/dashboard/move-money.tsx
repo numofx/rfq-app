@@ -9,6 +9,7 @@ import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { cn } from "@/lib/utils";
 
 const DESCRIPTION_MAX = 80;
+const UNTIL_MONTHS = ["NOV", "DEC", "JAN", "FEB", "MAR", "APR", "MAY"];
 // No flow behind these yet.
 const SOON_ACTIONS = ["Direct", "Request", "Deposit", "Withdraw", "Transfer"];
 
@@ -27,6 +28,7 @@ function LockRateForm() {
   const [recipient, setRecipient] = useState("");
   const [description, setDescription] = useState("");
   const [accountCode, setAccountCode] = useState(ACCOUNTS[0].currency);
+  const [until, setUntil] = useState(UNTIL_MONTHS[0]);
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
 
   const value = Number(amount);
@@ -113,6 +115,43 @@ function LockRateForm() {
                     {symbol}
                     {balance} available
                   </span>
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      </div>
+
+      <div className="mt-6">
+        <span id="lock-rate-until" className={FIELD_LABEL}>
+          Until
+        </span>
+        <DropdownMenu.Root modal={false}>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              aria-labelledby="lock-rate-until lock-rate-until-value"
+              className={cn(FIELD_LINE, "justify-between outline-none")}
+            >
+              <span id="lock-rate-until-value" className="text-[15px] text-[#141414] dark:text-white">
+                {until}
+              </span>
+              <ChevronDown className="h-4 w-4 text-black/60 dark:text-white/60" aria-hidden="true" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="start"
+              sideOffset={6}
+              className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
+            >
+              {UNTIL_MONTHS.map((month) => (
+                <DropdownMenu.Item
+                  key={month}
+                  onSelect={() => setUntil(month)}
+                  className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+                >
+                  {month}
                 </DropdownMenu.Item>
               ))}
             </DropdownMenu.Content>
