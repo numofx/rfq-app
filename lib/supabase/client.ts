@@ -18,16 +18,15 @@ function removeAuthKeys(storage: Storage) {
 
 /**
  * Keeps the session in sessionStorage, so it ends with the tab. Browsers bring sessionStorage back when a closed tab
- * is reopened, so any load after the page was left, other than a reload, ends the session as well.
+ * is reopened, and keep it through a reload, so any load after the page was left ends the session as well.
  */
 function getTabStorage() {
   if (typeof window === "undefined") return undefined;
 
   try {
     const storage = window.sessionStorage;
-    const [navigation] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
 
-    if (storage.getItem(PAGE_LEFT_KEY) && navigation?.type !== "reload") {
+    if (storage.getItem(PAGE_LEFT_KEY)) {
       removeAuthKeys(storage);
     }
     storage.removeItem(PAGE_LEFT_KEY);
