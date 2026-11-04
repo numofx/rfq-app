@@ -157,7 +157,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#EDE5DA] dark:bg-[#0A0A0A] md:flex-row">
       {/* Sidebar */}
-      <aside className="hidden w-[275px] shrink-0 flex-col overflow-y-auto px-6 pb-5 pt-8 md:flex">
+      <aside className="hidden w-[275px] shrink-0 flex-col overflow-y-auto overscroll-y-none px-6 pb-5 pt-8 md:flex">
         <div className="mb-8 pl-3.5">
           <Logo />
         </div>
@@ -186,7 +186,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content */}
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F6F0E9] dark:bg-[#111111] md:my-3 md:mr-3 md:rounded-[28px]">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-none bg-[#F6F0E9] dark:bg-[#111111] md:my-3 md:mr-3 md:rounded-[28px]">
         {children}
       </main>
     </div>
