@@ -82,18 +82,18 @@ function LockRateForm() {
       </p>
 
       <div className="mt-6">
-        <span id="lock-rate-from" className={FIELD_LABEL}>
-          From
+        <span id="lock-rate-account" className={FIELD_LABEL}>
+          Account
         </span>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
             <button
               type="button"
-              aria-labelledby="lock-rate-from lock-rate-from-value"
+              aria-labelledby="lock-rate-account lock-rate-account-value"
               className={cn(FIELD_PILL, "pl-[11px] pr-[18px]")}
             >
               <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
-              <span id="lock-rate-from-value" className="flex min-w-0 items-baseline gap-2.5 text-[16px] font-medium text-[#141414] dark:text-white">
+              <span id="lock-rate-account-value" className="flex min-w-0 items-baseline gap-2.5 text-[16px] font-medium text-[#141414] dark:text-white">
                 {account.currency}
                 <span className={cn(AVAILABLE, "truncate font-normal")}>
                   {account.symbol}
