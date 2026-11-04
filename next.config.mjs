@@ -3,17 +3,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  async redirects() {
-    return [
-      {
-        // The old hostname, kept for bookmarks and links in emails already sent.
-        source: "/:path*",
-        has: [{ type: "host", value: "portal.numofx.com" }],
-        destination: "https://command.numofx.com/:path*",
-        permanent: false,
-      },
-    ];
-  },
   async rewrites() {
     // The login form lives at /; numofx.com links here.
     return [{ source: "/login", destination: "/" }];
