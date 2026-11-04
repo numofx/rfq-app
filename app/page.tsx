@@ -237,8 +237,19 @@ export default function HomePage() {
     setView("password");
   };
 
+  const switchAuthView = (nextView: "login" | "signup") => {
+    setAuthError("");
+    setLoginErrorField(null);
+    setLoginErrorMessage("");
+    setStatusMessage("");
+    setAuthDebugInfo("");
+    setView(nextView);
+  };
+
   const handleForgotPassword = async () => {
     setAuthError("");
+    setLoginErrorField(null);
+    setLoginErrorMessage("");
     setStatusMessage("");
     setAuthDebugInfo("");
     if (!supabase) {
@@ -246,7 +257,8 @@ export default function HomePage() {
       return;
     }
     if (!loginEmail.trim()) {
-      setAuthError("Please enter your email address.");
+      setLoginErrorField("email");
+      setLoginErrorMessage("Please enter your email address.");
       return;
     }
 
@@ -550,7 +562,7 @@ export default function HomePage() {
       logoSize="large"
       className={
         isPremiumAuthView
-          ? "relative overflow-hidden bg-white text-black before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_top,_rgba(0,0,0,0.02),_transparent_55%)]"
+          ? "relative overflow-hidden bg-[#F6F0E9] text-[#141414]"
           : undefined
       }
     >
@@ -788,7 +800,7 @@ export default function HomePage() {
             >
             {view === "login" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
@@ -797,7 +809,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
                         Log in
                       </h1>
                       <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
@@ -816,17 +828,18 @@ export default function HomePage() {
                         value={loginEmail}
                         onChange={(event) => {
                           setLoginEmail(event.target.value);
+                          setAuthError("");
                           setLoginErrorField(null);
                           setLoginErrorMessage("");
                           setAuthDebugInfo("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
+                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black/10 ${
                           isLoginEmailError
                             ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-black/[0.02] hover:border-black/20"
+                            : "border-black/10 bg-[#F6F0E9] hover:border-black/20"
                         }`}
                       />
-                      {isLoginEmailError ? <p className="mt-2 text-[12px] text-[#fca5a5]">{loginErrorMessage}</p> : null}
+                      {isLoginEmailError ? <p className="mt-2 text-[12px] text-red-500">{loginErrorMessage}</p> : null}
                     </div>
 
                     <div>
@@ -837,7 +850,7 @@ export default function HomePage() {
                         className={`flex h-12 items-center rounded-lg border px-3 transition-colors ${
                           isLoginPasswordError
                             ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-black/[0.02] hover:border-black/20 focus-within:border-black/30"
+                            : "border-black/10 bg-[#F6F0E9] hover:border-black/20 focus-within:border-black/30"
                         }`}
                       >
                         <input
@@ -847,11 +860,12 @@ export default function HomePage() {
                           value={loginPassword}
                           onChange={(event) => {
                             setLoginPassword(event.target.value);
+                            setAuthError("");
                             setLoginErrorField(null);
                             setLoginErrorMessage("");
                             setAuthDebugInfo("");
                           }}
-                          className="h-full w-full bg-transparent text-[13px] text-black placeholder:text-black/40 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
@@ -876,25 +890,26 @@ export default function HomePage() {
                         </button>
                       </div>
                       {isLoginPasswordError ? (
-                        <p className="mt-2 text-[12px] text-[#fca5a5]">{loginErrorMessage}</p>
+                        <p className="mt-2 text-[12px] text-red-500">{loginErrorMessage}</p>
                       ) : null}
                     </div>
 
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       Log in
                     </button>
                   </form>
 
+                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
                   {statusMessage ? <p className="text-[12px] text-gray-500">{statusMessage}</p> : null}
                   {authDebugInfo ? <p className="text-[11px] text-amber-600/90">{authDebugInfo}</p> : null}
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="mt-3 w-full text-right text-xs text-black/50 transition hover:text-black"
+                    className="mt-3 w-full text-right text-xs text-black/50 transition hover:text-[#141414]"
                   >
                     Forgot your password?
                   </button>
@@ -902,8 +917,8 @@ export default function HomePage() {
                     <span className="text-xs text-black/50">New to Numo?</span>
                     <button
                       type="button"
-                      onClick={() => setView("signup")}
-                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-black"
+                      onClick={() => switchAuthView("signup")}
+                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-[#141414]"
                     >
                       Create account
                     </button>
@@ -912,7 +927,7 @@ export default function HomePage() {
               </>
             ) : view === "signup" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
@@ -921,7 +936,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
                         Create account
                       </h1>
                       <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
@@ -940,7 +955,7 @@ export default function HomePage() {
                           placeholder="Enter your first name"
                           value={firstName}
                           onChange={(event) => setFirstName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-black/10 bg-black/[0.02] px-3 text-[13px] text-black placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                          className="h-12 w-full rounded-lg border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
                         />
                       </div>
                       <div>
@@ -953,7 +968,7 @@ export default function HomePage() {
                           placeholder="Enter your last name"
                           value={lastName}
                           onChange={(event) => setLastName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-black/10 bg-black/[0.02] px-3 text-[13px] text-black placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                          className="h-12 w-full rounded-lg border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
                         />
                       </div>
                     </div>
@@ -972,8 +987,8 @@ export default function HomePage() {
                           setSignupEmail(event.target.value);
                           setAuthError("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-sky-500/20 ${
-                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-black/[0.02] hover:border-black/20"
+                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black/10 ${
+                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-[#F6F0E9] hover:border-black/20"
                         }`}
                       />
                     </div>
@@ -981,7 +996,7 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Checking..." : "Create account"}
                     </button>
@@ -992,8 +1007,8 @@ export default function HomePage() {
                     <span className="text-xs text-black/50">Already have an account?</span>
                     <button
                       type="button"
-                      onClick={() => setView("login")}
-                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-black"
+                      onClick={() => switchAuthView("login")}
+                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-[#141414]"
                     >
                       Log in
                     </button>
@@ -1002,7 +1017,7 @@ export default function HomePage() {
               </>
             ) : view === "verify" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8 text-center">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
@@ -1011,7 +1026,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
                         Verify your email
                       </h1>
                       <p className="text-sm text-black/60">Confirm your address to finish account setup</p>
@@ -1020,14 +1035,14 @@ export default function HomePage() {
 
                   <p className="text-[14px] leading-[1.6] text-black/60">
                     Check{" "}
-                    <span className="font-semibold text-black">{signupEmail.trim() || "your inbox"}</span>{" "}
+                    <span className="font-semibold text-[#141414]">{signupEmail.trim() || "your inbox"}</span>{" "}
                     for the verification link, then return here to continue.
                   </p>
 
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px"
+                    className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px"
                   >
                     Resend verification email
                   </button>
@@ -1035,7 +1050,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleVerificationContinue}
-                    className="text-[13px] font-medium text-black/50 transition hover:text-black"
+                    className="text-[13px] font-medium text-black/50 transition hover:text-[#141414]"
                   >
                     I&apos;ve verified &mdash; continue
                   </button>
@@ -1046,7 +1061,7 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/5 bg-white px-10 pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
                   <div className="space-y-3">
                     <div className="flex justify-center">
                       <div className="relative h-11 w-[160px]">
@@ -1055,7 +1070,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
                         Create your password
                       </h1>
                       <p className="text-sm text-black/60">Finish setting up your Numo account</p>
@@ -1065,7 +1080,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setView("signup")}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-black/10 bg-black/[0.02] text-[16px] text-black/60 transition hover:bg-black/[0.05]"
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-black/10 bg-[#F6F0E9] text-[16px] text-black/60 transition hover:bg-[#EDE5DA]"
                     aria-label="Back to sign up"
                   >
                     &larr;
@@ -1076,14 +1091,14 @@ export default function HomePage() {
                       <label htmlFor="new-password" className="sr-only">
                         Password
                       </label>
-                      <div className="flex h-12 items-center rounded-lg border border-black/10 bg-black/[0.02] px-3 transition-colors hover:border-black/20 focus-within:border-black/30">
+                      <div className="flex h-12 items-center rounded-lg border border-black/10 bg-[#F6F0E9] px-3 transition-colors hover:border-black/20 focus-within:border-black/30">
                         <input
                           id="new-password"
                           type={showCreatePassword ? "text" : "password"}
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-[13px] text-black placeholder:text-black/40 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1112,7 +1127,7 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-brand/20 text-[14px] font-semibold text-brand transition hover:bg-brand/30 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Creating..." : "Continue →"}
                     </button>
@@ -1125,7 +1140,7 @@ export default function HomePage() {
             )}
 
             {view !== "login" && view !== "signup" ? (
-              <div className="mt-6 text-center text-[12px] leading-[1.35] text-[#8f9099]">
+              <div className="mt-6 text-center text-[12px] leading-[1.35] text-black/55">
                 <p>
                   This site is protected by reCAPTCHA and the
                   <br />
@@ -1135,12 +1150,12 @@ export default function HomePage() {
             ) : null}
 
             {view === "login" || view === "signup" ? null : (
-              <div className="mt-4 flex justify-center gap-3 text-[12px] text-[#8f9099]">
-                <a href="#" className="hover:text-[#70707a]">
+              <div className="mt-4 flex justify-center gap-3 text-[12px] text-black/55">
+                <a href="#" className="hover:text-[#141414]">
                   Privacy Policy
                 </a>
                 <span aria-hidden="true">&middot;</span>
-                <a href="#" className="hover:text-[#70707a]">
+                <a href="#" className="hover:text-[#141414]">
                   Cookie Policy
                 </a>
               </div>
@@ -1150,13 +1165,13 @@ export default function HomePage() {
 
           {isPremiumAuthView ? (
             <footer className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-              <div className={`${containerClass} flex items-end justify-between text-[10px] text-black/40`}>
+              <div className={`${containerClass} flex items-end justify-between text-[10px] text-black/55`}>
                 <div className="pointer-events-auto flex items-center gap-2">
-                  <a href="#" className="hover:text-black/60">
+                  <a href="#" className="hover:text-[#141414]">
                     Privacy
                   </a>
                   <span aria-hidden="true">&middot;</span>
-                  <a href="#" className="hover:text-black/60">
+                  <a href="#" className="hover:text-[#141414]">
                     Cookie
                   </a>
                 </div>

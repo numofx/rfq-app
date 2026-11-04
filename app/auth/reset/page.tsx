@@ -79,16 +79,16 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout className="bg-[#F6F0E9] text-[#141414]">
       <ContentLayout variant="auth">
         <CardWrapper size="auth" className="max-w-sm">
-          <div className="space-y-5">
-            <h1 className="text-[24px] leading-none font-semibold tracking-[-0.02em] text-[#131318]">
+          <div className="space-y-5 rounded-[16px] border border-black/10 bg-white p-8">
+            <h1 className="text-[24px] leading-none font-semibold tracking-[-0.02em] text-[#141414]">
               Reset your password
             </h1>
 
             {!isReady ? (
-              <p className="text-[13px] text-[#6f717b]">Preparing password reset...</p>
+              <p className="text-[13px] text-black/55">Preparing password reset...</p>
             ) : (
               <form className="space-y-4" aria-label="Reset password form" onSubmit={handleResetSubmit}>
                 <div>
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
                     placeholder="Enter a new password"
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    className="h-[42px] w-full rounded-[12px] border border-[#e7e7ea] bg-[#efeff2] px-3 text-[13px] text-[#202026] placeholder:text-[#9697a4] focus:outline-none"
+                    className="h-[42px] w-full rounded-[12px] border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
                   />
                 </div>
 
@@ -115,27 +115,27 @@ export default function ResetPasswordPage() {
                     placeholder="Confirm your new password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-[42px] w-full rounded-[12px] border border-[#e7e7ea] bg-[#efeff2] px-3 text-[13px] text-[#202026] placeholder:text-[#9697a4] focus:outline-none"
+                    className="h-[42px] w-full rounded-[12px] border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="h-[42px] w-full rounded-[12px] bg-gradient-to-r from-[#111118] to-[#171722] text-[14px] font-semibold text-[#f2f2f4] shadow-[0_2px_0_rgba(0,0,0,0.08)]"
+                  className="h-[42px] w-full rounded-[12px] bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isBusy ? "Updating..." : "Update password →"}
                 </button>
               </form>
             )}
 
-            {statusMessage ? <p className="text-[12px] text-[#4b5d4b]">{statusMessage}</p> : null}
-            {authError ? <p className="text-[12px] text-[#b42318]">{authError}</p> : null}
+            {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
+            {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
 
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="w-full text-center text-[13px] font-medium text-[#6f717b] hover:text-[#444551]"
+              className="w-full text-center text-[13px] font-medium text-black/55 transition hover:text-[#141414]"
             >
               Back to login
             </button>
