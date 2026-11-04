@@ -103,7 +103,7 @@ export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentYear = new Date().getFullYear();
-  // numofx.com/signup redirects here with ?view=signup.
+  // numofx.com links here with ?view=signup.
   const [view, setView] = useState<View>(searchParams.get("view") === "signup" ? "signup" : "login");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");

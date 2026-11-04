@@ -3,6 +3,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    // The login form lives at /; numofx.com links here.
+    return [{ source: "/login", destination: "/" }];
+  },
   webpack: (config, { isServer }) => {
     // Fix for WalletConnect and other web3 libraries
     if (!isServer) {
