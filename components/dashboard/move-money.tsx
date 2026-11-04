@@ -3,12 +3,21 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { cn } from "@/lib/utils";
 
 const DESCRIPTION_MAX = 80;
-const UNTIL_MONTHS = ["NOV", "DEC", "JAN", "FEB", "MAR", "APR", "MAY"];
+const UNTIL_DATES = [
+  "Nov 30, 2026",
+  "Dec 31, 2026",
+  "Jan 31, 2027",
+  "Feb 28, 2027",
+  "Mar 31, 2027",
+  "Apr 30, 2027",
+  "May 31, 2027",
+];
 // No flow behind these yet.
 const SOON_ACTIONS = ["Exchange", "Direct", "Request", "Deposit", "Withdraw", "Transfer"];
 
@@ -16,10 +25,13 @@ const MENU_ITEM =
   "flex h-[42px] items-center justify-between rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
 const MENU_CONTENT =
   "z-50 rounded-2xl bg-white p-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:bg-[#1A1A1A]";
-const FIELD_LABEL = "text-[14px] text-[#141414] dark:text-white";
-const FIELD_LINE = "mt-2 flex h-10 w-full items-center border-b border-black/10 dark:border-white/10";
+const FIELD_LABEL = "block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
+const FIELD_PILL =
+  "mt-2 flex h-12 w-full items-center gap-3 rounded-full bg-[#EFE7DC] px-[18px] outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
 const FIELD_INPUT =
-  "w-full min-w-0 bg-transparent text-[15px] text-[#141414] outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/35";
+  "w-full min-w-0 bg-transparent text-[16px] text-[#141414] outline-none placeholder:text-black/55 dark:text-white dark:placeholder:text-white/45";
+const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
+const AVAILABLE = "font-mono text-[13px] text-black/60 dark:text-white/60";
 
 /** Mounted only while the dialog is open, so closing it clears the form. */
 function LockRateForm() {
@@ -27,7 +39,7 @@ function LockRateForm() {
   const [recipient, setRecipient] = useState("");
   const [description, setDescription] = useState("");
   const [accountCode, setAccountCode] = useState(ACCOUNTS[0].currency);
-  const [until, setUntil] = useState(UNTIL_MONTHS[0]);
+  const [until, setUntil] = useState(UNTIL_DATES[0]);
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
 
   const value = Number(amount);
@@ -37,13 +49,13 @@ function LockRateForm() {
 
   return (
     <form
-      className="mt-8"
+      className="mt-6"
       onSubmit={(event) => {
         event.preventDefault();
       }}
     >
-      <div className="flex items-baseline justify-center text-[30px] leading-none">
-        <span className="mr-2 text-black/40 dark:text-white/50">{account.symbol}</span>
+      <div className="flex items-baseline justify-center font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]">
+        <span className="text-black/40 dark:text-white/50">{account.symbol}</span>
         <input
           autoFocus
           aria-label="Amount"
@@ -60,15 +72,21 @@ function LockRateForm() {
           className="max-w-[80%] bg-transparent text-[#141414] outline-none placeholder:text-black/25 dark:text-white dark:placeholder:text-white/30"
         />
       </div>
-      <p aria-live="polite" className="mt-2 h-5 text-center text-[13px] text-[#B4412F] dark:text-[#E98A7A]">
-        {exceedsBalance ? "Exceeds your available balance" : ""}
+      <p
+        aria-live="polite"
+        className={cn(
+          "mt-2 h-5 text-center text-[13px]",
+          exceedsBalance ? "text-[#B4412F] dark:text-[#E98A7A]" : "text-black/60 dark:text-white/60"
+        )}
+      >
+        {exceedsBalance ? "Exceeds your available balance" : `Amount in ${account.currency}`}
       </p>
 
-      <div className="mt-4">
+      <div className="mt-6">
         <label htmlFor="lock-rate-to" className={FIELD_LABEL}>
           To
         </label>
-        <div className={FIELD_LINE}>
+        <div className={FIELD_PILL}>
           <input
             id="lock-rate-to"
             placeholder="Email, phone, ID, or @handle"
@@ -80,21 +98,26 @@ function LockRateForm() {
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <span id="lock-rate-from" className={FIELD_LABEL}>
           From
         </span>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
-            <button type="button" aria-labelledby="lock-rate-from lock-rate-from-value" className={cn(FIELD_LINE, "justify-between outline-none")}>
-              <span id="lock-rate-from-value" className="text-[15px] text-[#141414] dark:text-white">
+            <button
+              type="button"
+              aria-labelledby="lock-rate-from lock-rate-from-value"
+              className={cn(FIELD_PILL, "pl-[11px] pr-[18px]")}
+            >
+              <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
+              <span id="lock-rate-from-value" className="flex min-w-0 items-baseline gap-2.5 text-[16px] font-medium text-[#141414] dark:text-white">
                 {account.currency}
-                <span className="ml-2 text-black/55 dark:text-white/60">
+                <span className={cn(AVAILABLE, "truncate font-normal")}>
                   {account.symbol}
                   {account.balance} available
                 </span>
               </span>
-              <ChevronDown className="h-4 w-4 text-black/60 dark:text-white/60" aria-hidden="true" />
+              <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -103,14 +126,17 @@ function LockRateForm() {
               sideOffset={6}
               className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
             >
-              {ACCOUNTS.map(({ currency, symbol, balance }) => (
+              {ACCOUNTS.map(({ iconSrc, currency, symbol, balance }) => (
                 <DropdownMenu.Item
                   key={currency}
                   onSelect={() => setAccountCode(currency)}
                   className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
                 >
-                  {currency}
-                  <span className="text-[14px] text-black/55 dark:text-white/60">
+                  <span className="flex items-center gap-2.5 font-medium">
+                    <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
+                    {currency}
+                  </span>
+                  <span className={AVAILABLE}>
                     {symbol}
                     {balance} available
                   </span>
@@ -121,7 +147,7 @@ function LockRateForm() {
         </DropdownMenu.Root>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <span id="lock-rate-until" className={FIELD_LABEL}>
           Until
         </span>
@@ -130,12 +156,13 @@ function LockRateForm() {
             <button
               type="button"
               aria-labelledby="lock-rate-until lock-rate-until-value"
-              className={cn(FIELD_LINE, "justify-between outline-none")}
+              className={FIELD_PILL}
             >
-              <span id="lock-rate-until-value" className="text-[15px] text-[#141414] dark:text-white">
+              <Calendar className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />
+              <span id="lock-rate-until-value" className="text-[16px] font-medium text-[#141414] dark:text-white">
                 {until}
               </span>
-              <ChevronDown className="h-4 w-4 text-black/60 dark:text-white/60" aria-hidden="true" />
+              <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -144,13 +171,13 @@ function LockRateForm() {
               sideOffset={6}
               className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
             >
-              {UNTIL_MONTHS.map((month) => (
+              {UNTIL_DATES.map((date) => (
                 <DropdownMenu.Item
-                  key={month}
-                  onSelect={() => setUntil(month)}
+                  key={date}
+                  onSelect={() => setUntil(date)}
                   className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
                 >
-                  {month}
+                  {date}
                 </DropdownMenu.Item>
               ))}
             </DropdownMenu.Content>
@@ -158,11 +185,11 @@ function LockRateForm() {
         </DropdownMenu.Root>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <label htmlFor="lock-rate-description" className={FIELD_LABEL}>
-          Description
+          Description <span className="font-normal text-black/60 dark:text-white/60">(optional)</span>
         </label>
-        <div className={FIELD_LINE}>
+        <div className={FIELD_PILL}>
           <input
             id="lock-rate-description"
             placeholder="What's this for?"
@@ -171,7 +198,7 @@ function LockRateForm() {
             onChange={(event) => setDescription(event.target.value)}
             className={FIELD_INPUT}
           />
-          <span className="ml-3 shrink-0 text-[14px] text-black/55 dark:text-white/60">
+          <span className={cn(AVAILABLE, "shrink-0")}>
             {description.length}/{DESCRIPTION_MAX}
           </span>
         </div>
@@ -180,7 +207,7 @@ function LockRateForm() {
       <button
         type="submit"
         disabled={!canLockRate}
-        className="mt-8 h-12 w-full rounded-full bg-[#141414] text-[15px] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#EDE5DA] disabled:text-black/45 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
+        className="mt-7 h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
       >
         Lock rate
       </button>
@@ -227,13 +254,23 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
 
       <Dialog.Root open={isLockRateOpen} onOpenChange={setIsLockRateOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/20" />
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-md" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-white p-6 outline-none dark:bg-[#1A1A1A] sm:p-8"
+            className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[464px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
           >
-            <Dialog.Title className="text-center text-[16px] text-[#141414] dark:text-white">Lock rate</Dialog.Title>
-            <LockRateForm />
+            <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-7">
+              <Dialog.Title className="text-center text-[17px] font-semibold tracking-[-0.01em] text-[#141414] dark:text-white">
+                Lock rate
+              </Dialog.Title>
+              <Dialog.Close
+                aria-label="Close"
+                className="absolute right-[34px] top-6 flex h-7 w-7 items-center justify-center rounded-full text-[#141414]/80 outline-none transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-black/20 dark:text-white/70 dark:hover:bg-white/10"
+              >
+                <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              </Dialog.Close>
+              <LockRateForm />
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
