@@ -187,8 +187,7 @@ function LockRateForm() {
           ) : (
             <>
               <span className="text-[16px] font-medium text-[#141414] dark:text-white">
-                1 USDC = ₦
-                {forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cNGN per USDC
               </span>
               <span className={cn(AVAILABLE, "ml-auto flex shrink-0 items-center gap-1.5")}>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#2E9E6B]" aria-hidden="true" />
