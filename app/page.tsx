@@ -1,8 +1,20 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AuthCard,
+  AuthField,
+  AuthFooter,
+  AuthHeading,
+  AuthPasswordField,
+  authContentClass,
+  authFormClass,
+  authLinkClass,
+  authPageClass,
+  authPrimaryButtonClass,
+  authWidthClass,
+} from "@/components/auth/auth-ui";
 import { AppLayout, CardWrapper, ContentLayout, containerClass } from "@/components/layout/page-shell";
 import { getReadableAuthError } from "@/lib/auth-errors";
 import { supabase } from "@/lib/supabase/client";
@@ -92,8 +104,6 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const currentYear = new Date().getFullYear();
   const [view, setView] = useState<View>("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -541,7 +551,7 @@ export default function HomePage() {
       logoSize="large"
       className={
         isPremiumAuthView
-          ? "relative overflow-hidden bg-[#F6F0E9] text-[#141414]"
+          ? authPageClass
           : undefined
       }
     >
@@ -769,375 +779,193 @@ export default function HomePage() {
             variant="auth"
             className={
               isPremiumAuthView
-                ? "relative z-10 flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 pt-6 pb-[max(env(safe-area-inset-bottom),2rem)]"
+                ? authContentClass
                 : "pt-20"
             }
           >
-            <CardWrapper
-              size="auth"
-              className={isPremiumAuthView ? "max-w-[420px] -translate-y-14 md:-translate-y-20" : "max-w-sm"}
-            >
+            <CardWrapper size="auth" className={isPremiumAuthView ? authWidthClass : "max-w-sm"}>
             {view === "login" ? (
-              <>
-                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
-                  <div className="space-y-5">
-                    <div className="flex justify-center">
-                      <div className="relative h-9 w-[130px]">
-                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
-                      </div>
-                    </div>
+              <AuthCard
+                below={
+                  <>
+                    New to Numo?
+                    <button type="button" onClick={() => switchAuthView("signup")} className={authLinkClass}>
+                      Create an account
+                    </button>
+                  </>
+                }
+              >
+                <AuthHeading title="Welcome back" subtitle="Lock in exchange rates ahead of time." />
 
-                    <div className="space-y-1.5 text-center">
-                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
-                        Log in
-                      </h1>
-                      <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
-                    </div>
-                  </div>
+                <form className={authFormClass} aria-label="Login form" onSubmit={handleLoginSubmit}>
+                  <AuthField
+                    id="email"
+                    label="Email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={loginEmail}
+                    invalid={isLoginEmailError}
+                    errorMessage={isLoginEmailError ? loginErrorMessage : undefined}
+                    onChange={(event) => {
+                      setLoginEmail(event.target.value);
+                      setAuthError("");
+                      setLoginErrorField(null);
+                      setLoginErrorMessage("");
+                      setAuthDebugInfo("");
+                    }}
+                  />
 
-                  <form className="space-y-3" aria-label="Login form" onSubmit={handleLoginSubmit}>
-                    <div>
-                      <label htmlFor="email" className="sr-only">
-                        Email address
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={loginEmail}
-                        onChange={(event) => {
-                          setLoginEmail(event.target.value);
-                          setAuthError("");
-                          setLoginErrorField(null);
-                          setLoginErrorMessage("");
-                          setAuthDebugInfo("");
-                        }}
-                        className={`h-12 w-full rounded-full border px-5 text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04] ${
-                          isLoginEmailError
-                            ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-[#FAF6F0] hover:border-black/20"
-                        }`}
-                      />
-                      {isLoginEmailError ? <p className="mt-2 pl-5 text-[12px] text-red-500">{loginErrorMessage}</p> : null}
-                    </div>
-
-                    <div>
-                      <label htmlFor="password" className="sr-only">
-                        Password
-                      </label>
-                      <div
-                        className={`flex h-12 items-center rounded-full border pl-5 pr-2 transition-colors ${
-                          isLoginPasswordError
-                            ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-[#FAF6F0] hover:border-black/20 focus-within:border-black/30 focus-within:ring-4 focus-within:ring-black/[0.04]"
-                        }`}
-                      >
-                        <input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          value={loginPassword}
-                          onChange={(event) => {
-                            setLoginPassword(event.target.value);
-                            setAuthError("");
-                            setLoginErrorField(null);
-                            setLoginErrorMessage("");
-                            setAuthDebugInfo("");
-                          }}
-                          className="h-full w-full bg-transparent text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-black/45 transition hover:bg-black/5 hover:text-[#141414]"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                            <circle cx="12" cy="12" r="3" />
-                            {showPassword ? <path d="M3 3l18 18" /> : null}
-                          </svg>
-                        </button>
-                      </div>
-                      {isLoginPasswordError ? (
-                        <p className="mt-2 pl-5 text-[12px] text-red-500">{loginErrorMessage}</p>
-                      ) : null}
+                  <AuthPasswordField
+                    id="password"
+                    label="Password"
+                    value={loginPassword}
+                    invalid={isLoginPasswordError}
+                    errorMessage={isLoginPasswordError ? loginErrorMessage : undefined}
+                    onChange={(event) => {
+                      setLoginPassword(event.target.value);
+                      setAuthError("");
+                      setLoginErrorField(null);
+                      setLoginErrorMessage("");
+                      setAuthDebugInfo("");
+                    }}
+                    action={
                       <button
                         type="button"
                         onClick={handleForgotPassword}
-                        className="ml-auto mt-2 block pr-5 text-[13px] text-black/55 transition hover:text-[#141414]"
+                        className="transition hover:text-[#141414]"
                       >
-                        Forgot your password?
+                        Forgot password?
                       </button>
-                    </div>
+                    }
+                  />
 
-                    <button
-                      type="submit"
-                      disabled={isAuthBusy}
-                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      Log in
-                    </button>
-                  </form>
+                  <button type="submit" disabled={isAuthBusy} className={authPrimaryButtonClass}>
+                    Log in
+                  </button>
+                </form>
 
-                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-                  {statusMessage ? <p className="text-[12px] text-gray-500">{statusMessage}</p> : null}
-                  {authDebugInfo ? <p className="text-[11px] text-amber-600/90">{authDebugInfo}</p> : null}
-                  <p className="flex items-baseline justify-center gap-2 border-t border-black/[0.07] pt-5">
-                    <span className="text-[13px] text-black/55">New to Numo?</span>
-                    <button
-                      type="button"
-                      onClick={() => switchAuthView("signup")}
-                      className="text-[13px] font-medium text-[#141414] underline decoration-black/25 underline-offset-4 transition hover:decoration-black"
-                    >
-                      Create account
-                    </button>
-                  </p>
-                </div>
-              </>
+                {authError ? <p className="mt-4 text-center text-[12px] text-red-500">{authError}</p> : null}
+                {statusMessage ? <p className="mt-4 text-center text-[12px] text-[#6B645E]">{statusMessage}</p> : null}
+                {authDebugInfo ? <p className="mt-2 text-[11px] text-amber-600/90">{authDebugInfo}</p> : null}
+              </AuthCard>
             ) : view === "signup" ? (
-              <>
-                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
-                  <div className="space-y-5">
-                    <div className="flex justify-center">
-                      <div className="relative h-9 w-[130px]">
-                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5 text-center">
-                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
-                        Create account
-                      </h1>
-                      <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
-                    </div>
-                  </div>
-
-                  <form className="space-y-3" aria-label="Sign up form" onSubmit={handleSignupSubmit}>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="first-name" className="sr-only">
-                          First name
-                        </label>
-                        <input
-                          id="first-name"
-                          type="text"
-                          placeholder="First name"
-                          value={firstName}
-                          onChange={(event) => setFirstName(event.target.value)}
-                          className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="last-name" className="sr-only">
-                          Last name
-                        </label>
-                        <input
-                          id="last-name"
-                          type="text"
-                          placeholder="Last name"
-                          value={lastName}
-                          onChange={(event) => setLastName(event.target.value)}
-                          className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="signup-email" className="sr-only">
-                        Email address
-                      </label>
-                      <input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={signupEmail}
-                        disabled={isAuthBusy}
-                        onChange={(event) => {
-                          setSignupEmail(event.target.value);
-                          setAuthError("");
-                        }}
-                        className={`h-12 w-full rounded-full border px-5 text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04] ${
-                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-[#FAF6F0] hover:border-black/20"
-                        }`}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isAuthBusy}
-                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {isAuthBusy ? "Checking..." : "Create account"}
-                    </button>
-                  </form>
-
-                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-                  <p className="flex items-baseline justify-center gap-2 border-t border-black/[0.07] pt-5">
-                    <span className="text-[13px] text-black/55">Already have an account?</span>
-                    <button
-                      type="button"
-                      onClick={() => switchAuthView("login")}
-                      className="text-[13px] font-medium text-[#141414] underline decoration-black/25 underline-offset-4 transition hover:decoration-black"
-                    >
+              <AuthCard
+                below={
+                  <>
+                    Already have an account?
+                    <button type="button" onClick={() => switchAuthView("login")} className={authLinkClass}>
                       Log in
                     </button>
-                  </p>
-                </div>
-              </>
+                  </>
+                }
+              >
+                <AuthHeading title="Create your account" subtitle="Lock in exchange rates ahead of time." />
+
+                <form className={authFormClass} aria-label="Sign up form" onSubmit={handleSignupSubmit}>
+                  <div className="grid grid-cols-1 gap-[17px] sm:grid-cols-2 sm:gap-3">
+                    <AuthField
+                      id="first-name"
+                      label="First name"
+                      type="text"
+                      placeholder="Jane"
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
+                    />
+                    <AuthField
+                      id="last-name"
+                      label="Last name"
+                      type="text"
+                      placeholder="Smith"
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
+                    />
+                  </div>
+
+                  <AuthField
+                    id="signup-email"
+                    label="Email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={signupEmail}
+                    disabled={isAuthBusy}
+                    invalid={Boolean(authError)}
+                    onChange={(event) => {
+                      setSignupEmail(event.target.value);
+                      setAuthError("");
+                    }}
+                  />
+
+                  <button type="submit" disabled={isAuthBusy} className={authPrimaryButtonClass}>
+                    {isAuthBusy ? "Checking..." : "Create account"}
+                  </button>
+                </form>
+
+                {authError ? <p className="mt-4 text-center text-[12px] text-red-500">{authError}</p> : null}
+              </AuthCard>
             ) : view === "verify" ? (
-              <>
-                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)] text-center">
-                  <div className="space-y-5">
-                    <div className="flex justify-center">
-                      <div className="relative h-9 w-[130px]">
-                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
-                      </div>
-                    </div>
+              <AuthCard>
+                <AuthHeading title="Verify your email" subtitle="Confirm your address to finish account setup." />
 
-                    <div className="space-y-1.5 text-center">
-                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
-                        Verify your email
-                      </h1>
-                      <p className="text-sm text-black/60">Confirm your address to finish account setup</p>
-                    </div>
-                  </div>
+                <p className="mt-6 text-center text-[14px] leading-[1.6] text-[#6B645E]">
+                  Check{" "}
+                  <span className="font-semibold text-[#141414]">{signupEmail.trim() || "your inbox"}</span>{" "}
+                  for the verification link, then return here to continue.
+                </p>
 
-                  <p className="text-[14px] leading-[1.6] text-black/60">
-                    Check{" "}
-                    <span className="font-semibold text-[#141414]">{signupEmail.trim() || "your inbox"}</span>{" "}
-                    for the verification link, then return here to continue.
-                  </p>
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  className={`${authPrimaryButtonClass} !mt-6`}
+                >
+                  Resend verification email
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={handleResendVerification}
-                    className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px"
-                  >
-                    Resend verification email
-                  </button>
+                <button
+                  type="button"
+                  onClick={handleVerificationContinue}
+                  className="mt-4 w-full text-center text-[13px] font-medium text-[#6B645E] transition hover:text-[#141414]"
+                >
+                  I&apos;ve verified &mdash; continue
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={handleVerificationContinue}
-                    className="text-[13px] font-medium text-black/50 transition hover:text-[#141414]"
-                  >
-                    I&apos;ve verified &mdash; continue
-                  </button>
-
-                  {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
-                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-                </div>
-              </>
+                {statusMessage ? <p className="mt-4 text-center text-[12px] text-green-600">{statusMessage}</p> : null}
+                {authError ? <p className="mt-4 text-center text-[12px] text-red-500">{authError}</p> : null}
+              </AuthCard>
             ) : (
-              <>
-                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
-                  <div className="space-y-5">
-                    <div className="flex justify-center">
-                      <div className="relative h-9 w-[130px]">
-                        <Image src="/numo.png" alt="Numo" fill className="object-contain" />
-                      </div>
-                    </div>
+              <AuthCard>
+                <button
+                  type="button"
+                  onClick={() => setView("signup")}
+                  className="absolute left-5 top-5 flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#EFE7DC] text-[16px] text-[#6B645E] transition hover:text-[#141414]"
+                  aria-label="Back to sign up"
+                >
+                  &larr;
+                </button>
 
-                    <div className="space-y-1.5 text-center">
-                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
-                        Create your password
-                      </h1>
-                      <p className="text-sm text-black/60">Finish setting up your Numo account</p>
-                    </div>
-                  </div>
+                <AuthHeading title="Create your password" subtitle="Finish setting up your Numo account." />
 
-                  <button
-                    type="button"
-                    onClick={() => setView("signup")}
-                    className="absolute left-6 top-6 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-black/10 bg-[#FAF6F0] text-[16px] text-black/60 transition hover:bg-[#EDE5DA]"
-                    aria-label="Back to sign up"
-                  >
-                    &larr;
+                <form className={authFormClass} aria-label="Create password form" onSubmit={handlePasswordSubmit}>
+                  <AuthPasswordField
+                    id="new-password"
+                    label="Password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+
+                  <button type="submit" disabled={isAuthBusy} className={authPrimaryButtonClass}>
+                    {isAuthBusy ? "Creating..." : "Continue"}
                   </button>
+                </form>
 
-                  <form className="space-y-4" aria-label="Create password form" onSubmit={handlePasswordSubmit}>
-                    <div>
-                      <label htmlFor="new-password" className="sr-only">
-                        Password
-                      </label>
-                      <div className="flex h-12 items-center rounded-full border border-black/10 bg-[#FAF6F0] pl-5 pr-2 transition-colors hover:border-black/20 focus-within:border-black/30 focus-within:ring-4 focus-within:ring-black/[0.04]">
-                        <input
-                          id="new-password"
-                          type={showCreatePassword ? "text" : "password"}
-                          value={newPassword}
-                          onChange={(event) => setNewPassword(event.target.value)}
-                          placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCreatePassword((prev) => !prev)}
-                          className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-black/45 transition hover:bg-black/5 hover:text-[#141414]"
-                          aria-label={showCreatePassword ? "Hide password" : "Show password"}
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                            <circle cx="12" cy="12" r="3" />
-                            {showCreatePassword ? <path d="M3 3l18 18" /> : null}
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isAuthBusy}
-                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {isAuthBusy ? "Creating..." : "Continue →"}
-                    </button>
-                  </form>
-
-                  {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-                  {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
-                </div>
-              </>
+                {authError ? <p className="mt-4 text-center text-[12px] text-red-500">{authError}</p> : null}
+                {statusMessage ? <p className="mt-4 text-center text-[12px] text-green-600">{statusMessage}</p> : null}
+              </AuthCard>
             )}
             </CardWrapper>
           </ContentLayout>
 
           {isPremiumAuthView ? (
-            <footer className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-              <div className={`${containerClass} flex items-end justify-between text-[10px] text-black/55`}>
-                <div className="pointer-events-auto flex items-center gap-2">
-                  <a href="#" className="hover:text-[#141414]">
-                    Privacy
-                  </a>
-                  <span aria-hidden="true">&middot;</span>
-                  <a href="#" className="hover:text-[#141414]">
-                    Cookie
-                  </a>
-                </div>
-                <div className="pointer-events-auto text-right">
-                  <p>Numo Technologies Inc.</p>
-                  <p>All rights reserved, © Numo {currentYear}.</p>
-                </div>
-              </div>
-            </footer>
+            <AuthFooter />
           ) : (
             <footer className="border-t border-[#d9dbe2]">
               <div className={`${containerClass} py-10`}>

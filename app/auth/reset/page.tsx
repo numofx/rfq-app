@@ -2,6 +2,18 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AuthCard,
+  AuthFooter,
+  AuthHeading,
+  AuthPasswordField,
+  authContentClass,
+  authFormClass,
+  authLinkClass,
+  authPageClass,
+  authPrimaryButtonClass,
+  authWidthClass,
+} from "@/components/auth/auth-ui";
 import { AppLayout, CardWrapper, ContentLayout } from "@/components/layout/page-shell";
 import { getReadableResetError } from "@/lib/auth-errors";
 import { supabase } from "@/lib/supabase/client";
@@ -80,69 +92,50 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AppLayout showLogoSuffix={false} className="bg-[#F6F0E9] text-[#141414]">
-      <ContentLayout variant="auth">
-        <CardWrapper size="auth" className="max-w-[420px]">
-          <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
-            <h1 className="text-center text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
-              Reset your password
-            </h1>
+    <AppLayout hideLogo className={authPageClass}>
+      <ContentLayout variant="auth" className={authContentClass}>
+        <CardWrapper size="auth" className={authWidthClass}>
+          <AuthCard
+            below={
+              <button type="button" onClick={() => router.push("/")} className={authLinkClass}>
+                Back to login
+              </button>
+            }
+          >
+            <AuthHeading title="Reset your password" subtitle="Choose a new password for your account." />
 
             {!isReady ? (
-              authError ? null : <p className="text-center text-[13px] text-black/55">Preparing password reset...</p>
+              authError ? null : (
+                <p className="mt-6 text-center text-[13px] text-[#6B645E]">Preparing password reset...</p>
+              )
             ) : (
-              <form className="space-y-4" aria-label="Reset password form" onSubmit={handleResetSubmit}>
-                <div>
-                  <label htmlFor="new-password" className="sr-only">
-                    New password
-                  </label>
-                  <input
-                    id="new-password"
-                    type="password"
-                    placeholder="Enter a new password"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
-                  />
-                </div>
+              <form className={authFormClass} aria-label="Reset password form" onSubmit={handleResetSubmit}>
+                <AuthPasswordField
+                  id="new-password"
+                  label="New password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
 
-                <div>
-                  <label htmlFor="confirm-password" className="sr-only">
-                    Confirm password
-                  </label>
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Confirm your new password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
-                  />
-                </div>
+                <AuthPasswordField
+                  id="confirm-password"
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
 
-                <button
-                  type="submit"
-                  disabled={isBusy}
-                  className="h-12 w-full rounded-full bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isBusy ? "Updating..." : "Update password →"}
+                <button type="submit" disabled={isBusy} className={authPrimaryButtonClass}>
+                  {isBusy ? "Updating..." : "Update password"}
                 </button>
               </form>
             )}
 
-            {statusMessage ? <p className="text-[12px] text-green-600">{statusMessage}</p> : null}
-            {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-
-            <button
-              type="button"
-              onClick={() => router.push("/")}
-              className="w-full text-center text-[13px] font-medium text-black/55 transition hover:text-[#141414]"
-            >
-              Back to login
-            </button>
-          </div>
+            {statusMessage ? <p className="mt-4 text-center text-[12px] text-green-600">{statusMessage}</p> : null}
+            {authError ? <p className="mt-4 text-center text-[12px] text-red-500">{authError}</p> : null}
+          </AuthCard>
         </CardWrapper>
       </ContentLayout>
+      <AuthFooter />
     </AppLayout>
   );
 }
