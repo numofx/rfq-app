@@ -37,7 +37,7 @@ export function WelcomeBanner({ onAddFunds }: { onAddFunds: () => void }) {
     <div className="mb-10 flex items-center gap-3 rounded-2xl bg-[#FDFBF7] py-3 pl-4 pr-3 text-[14px] dark:bg-[#1A1A1A] sm:min-h-[52px] sm:rounded-full">
       <span className="h-2 w-2 shrink-0 rounded-full bg-[#3B82DC]" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-black/70 dark:text-white/70">
-        Your account is ready. Add funds to start exchanging between USDC and cNGN.
+        Your account is ready. Add funds to start hedging.
       </p>
       <button
         type="button"
