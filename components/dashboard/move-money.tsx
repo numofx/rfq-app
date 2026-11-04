@@ -6,9 +6,9 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
+import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { cn } from "@/lib/utils";
 
-const DESCRIPTION_MAX = 80;
 const UNTIL_DATES = [
   "Nov 30, 2026",
   "Dec 31, 2026",
@@ -18,6 +18,8 @@ const UNTIL_DATES = [
   "Apr 30, 2027",
   "May 31, 2027",
 ];
+// The only date with a listed book: cNGN-30NOV26.
+const QUOTED_UNTIL = UNTIL_DATES[0];
 // No flow behind these yet.
 const SOON_ACTIONS = ["Exchange", "Direct", "Request", "Deposit", "Withdraw", "Transfer"];
 
@@ -28,23 +30,32 @@ const MENU_CONTENT =
 const FIELD_LABEL = "block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
 const FIELD_PILL =
   "mt-2 flex h-12 w-full items-center gap-3 rounded-full bg-[#EFE7DC] px-[18px] outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
-const FIELD_INPUT =
-  "w-full min-w-0 bg-transparent text-[16px] text-[#141414] outline-none placeholder:text-black/55 dark:text-white dark:placeholder:text-white/45";
 const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
 const AVAILABLE = "font-mono text-[13px] text-black/60 dark:text-white/60";
 
 /** Mounted only while the dialog is open, so closing it clears the form. */
 function LockRateForm() {
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
   const [accountCode, setAccountCode] = useState(ACCOUNTS[0].currency);
   const [until, setUntil] = useState(UNTIL_DATES[0]);
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
+  const { book, isPending: isRatePending } = useForwardBook();
+
+  // Locking from USDC buys cNGN forward, at the ask. Locking from cNGN sells it, at the bid.
+  const bookPrice = until === QUOTED_UNTIL ? (account.currency === "USDC" ? book?.ask : book?.bid) : null;
+  const forwardRate = bookPrice ? 1 / bookPrice : null;
+
+  let rateMessage = "Unavailable";
+  if (until !== QUOTED_UNTIL) {
+    rateMessage = "No market for this date";
+  } else if (isRatePending) {
+    rateMessage = "Loading";
+  }
 
   const value = Number(amount);
   const exceedsBalance = value > Number(account.balance);
   // Nothing locks a rate yet and every balance is a placeholder 0.00, so this stays false.
-  const canLockRate = value > 0 && !exceedsBalance;
+  const canLockRate = value > 0 && !exceedsBalance && forwardRate !== null;
 
   return (
     <form
@@ -169,21 +180,22 @@ function LockRateForm() {
       </div>
 
       <div className="mt-4">
-        <label htmlFor="lock-rate-description" className={FIELD_LABEL}>
-          Description <span className="font-normal text-black/60 dark:text-white/60">(optional)</span>
-        </label>
+        <p className={FIELD_LABEL}>Forward rate</p>
         <div className={FIELD_PILL}>
-          <input
-            id="lock-rate-description"
-            placeholder="What's this for?"
-            maxLength={DESCRIPTION_MAX}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className={FIELD_INPUT}
-          />
-          <span className={cn(AVAILABLE, "shrink-0")}>
-            {description.length}/{DESCRIPTION_MAX}
-          </span>
+          {forwardRate === null ? (
+            <span className="text-[16px] text-black/60 dark:text-white/60">{rateMessage}</span>
+          ) : (
+            <>
+              <span className="text-[16px] font-medium text-[#141414] dark:text-white">
+                1 USDC = ₦
+                {forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className={cn(AVAILABLE, "ml-auto flex shrink-0 items-center gap-1.5")}>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#2E9E6B]" aria-hidden="true" />
+                Live
+              </span>
+            </>
+          )}
         </div>
       </div>
 
