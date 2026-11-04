@@ -1138,28 +1138,6 @@ export default function HomePage() {
                 </div>
               </>
             )}
-
-            {view !== "login" && view !== "signup" ? (
-              <div className="mt-6 text-center text-[12px] leading-[1.35] text-black/55">
-                <p>
-                  This site is protected by reCAPTCHA and the
-                  <br />
-                  Google Privacy Policy and Terms of Service apply.
-                </p>
-              </div>
-            ) : null}
-
-            {view === "login" || view === "signup" ? null : (
-              <div className="mt-4 flex justify-center gap-3 text-[12px] text-black/55">
-                <a href="#" className="hover:text-[#141414]">
-                  Privacy Policy
-                </a>
-                <span aria-hidden="true">&middot;</span>
-                <a href="#" className="hover:text-[#141414]">
-                  Cookie Policy
-                </a>
-              </div>
-            )}
             </CardWrapper>
           </ContentLayout>
 
