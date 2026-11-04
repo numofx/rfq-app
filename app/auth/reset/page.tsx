@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AppLayout className="bg-[#F6F0E9] text-[#141414]">
+    <AppLayout showLogoSuffix={false} className="bg-[#F6F0E9] text-[#141414]">
       <ContentLayout variant="auth">
         <CardWrapper size="auth" className="max-w-sm">
           <div className="space-y-5 rounded-[16px] border border-black/10 bg-white p-8">
