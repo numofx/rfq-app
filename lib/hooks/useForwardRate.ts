@@ -1,14 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ForwardBook } from "@/lib/forward-quote";
 
 const POLL_MS = 5000;
 
-/** The best prices on the cNGN-30NOV26 book, in USDC per cNGN. Null when that side cannot be quoted. */
-export interface ForwardBook {
-  bid: number | null;
-  ask: number | null;
-}
-
-/** Null while loading or after a failed read, so a stale price is never shown as live. */
+/** Null while loading or after a failed read, so a stale price is never shown. */
 export function useForwardBook() {
   const { data, isError, isPending } = useQuery({
     queryKey: ["forward-book"],

@@ -6,6 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
+import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,52 @@ const FIELD_PILL =
 const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
 const AVAILABLE = "font-mono text-[13px] text-black/60 dark:text-white/60";
 
+const formatNumber = (value: number) =>
+  value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const formatSigned = (value: number) => `${value < 0 ? "−" : "+"}${formatNumber(Math.abs(value))}`;
+
+const formatPercent = (fraction: number) => `${(fraction * 100).toFixed(2)}%`;
+
+function BreakdownRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-black/60 dark:text-white/60">{label}</dt>
+      <dd className="text-right font-mono text-[#141414] dark:text-white">{value}</dd>
+    </div>
+  );
+}
+
+/** How the rate above is made up, then what locking the entered amount comes to. */
+function RateBreakdown({ quote, currency }: { quote: ForwardQuote; currency: string }) {
+  const { annualizedPremium, daysToExpiry, feePoints, feeRate, points, position, spot } = quote;
+  const premium = annualizedPremium === null ? "" : ` (${annualizedPremium < 0 ? "−" : "+"}${formatPercent(Math.abs(annualizedPremium))} a year)`;
+
+  return (
+    <dl className="mt-4 space-y-1.5 rounded-2xl border border-black/10 px-4 py-3 text-[13px] dark:border-white/10">
+      <BreakdownRow label="Spot rate" value={formatNumber(spot)} />
+      <BreakdownRow label="Forward points" value={`${formatSigned(points)}${premium}`} />
+      <BreakdownRow
+        label={`Fee (${formatPercent(feeRate)})`}
+        value={`${formatSigned(feePoints)}${position ? ` ($${formatNumber(position.feeUsdc)})` : ""}`}
+      />
+      {position ? (
+        <>
+          <BreakdownRow
+            label="You lock"
+            value={currency === "USDC" ? `₦${formatNumber(position.locked)}` : `$${formatNumber(position.locked)}`}
+          />
+          <BreakdownRow
+            label={`Margin required (${INITIAL_MARGIN_RATE * 100}%)`}
+            value={`$${formatNumber(position.marginUsdc)}`}
+          />
+        </>
+      ) : null}
+      <BreakdownRow label="Settles" value={`In ${daysToExpiry} ${daysToExpiry === 1 ? "day" : "days"}, cash in USDC`} />
+    </dl>
+  );
+}
+
 /** Mounted only while the dialog is open, so closing it clears the form. */
 function LockRateForm() {
   const [amount, setAmount] = useState("");
@@ -43,21 +90,23 @@ function LockRateForm() {
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
   const { book, isPending: isRatePending } = useForwardBook();
 
-  // Locking from USDC buys cNGN forward, at the ask. Locking from cNGN sells it, at the bid.
-  const bookPrice = until === QUOTED_UNTIL ? (account.currency === "USDC" ? book?.ask : book?.bid) : null;
-  const forwardRate = bookPrice ? 1 / bookPrice : null;
+  const value = Number(amount);
+  const quote =
+    book && until === QUOTED_UNTIL ? quoteForward(book, value, account.currency as "USDC" | "cNGN", Date.now()) : null;
+  const canQuoteWithoutAmount = book ? quoteForward(book, 0, account.currency as "USDC" | "cNGN", Date.now()) !== null : false;
 
   let rateMessage = "Unavailable";
   if (until !== QUOTED_UNTIL) {
     rateMessage = "No market for this date";
   } else if (isRatePending) {
     rateMessage = "Loading";
+  } else if (canQuoteWithoutAmount) {
+    rateMessage = "Not enough liquidity for this amount";
   }
 
-  const value = Number(amount);
   const exceedsBalance = value > Number(account.balance);
   // Nothing locks a rate yet and every balance is a placeholder 0.00, so this stays false.
-  const canLockRate = value > 0 && !exceedsBalance && forwardRate !== null;
+  const canLockRate = value > 0 && !exceedsBalance && quote !== null;
 
   return (
     <form
@@ -182,14 +231,13 @@ function LockRateForm() {
       </div>
 
       <div className="mt-6">
-        <p className={cn(LARGE_FIGURE, "text-center", forwardRate === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
-          {forwardRate === null
-            ? "—"
-            : forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <p className={cn(LARGE_FIGURE, "text-center", quote === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
+          {quote === null ? "—" : formatNumber(quote.rate)}
         </p>
         <p className={cn(FIGURE_CAPTION, "text-black/60 dark:text-white/60")}>
-          {forwardRate === null ? rateMessage : "Forward rate in cNGN per USDC"}
+          {quote === null ? rateMessage : "Forward rate in cNGN per USDC, after fees"}
         </p>
+        {quote === null ? null : <RateBreakdown quote={quote} currency={account.currency} />}
       </div>
 
       <button
