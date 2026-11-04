@@ -32,9 +32,9 @@ interface SidebarItemProps {
 
 function SidebarItem({ icon: Icon, label, href, isActive, isSoon }: SidebarItemProps) {
   const className = cn(
-    "flex h-[38px] items-center gap-3 rounded-lg px-3 text-[14px] transition-colors",
+    "flex h-11 items-center gap-3 rounded-full px-3.5 text-[15px] transition-colors",
     isActive
-      ? "bg-white text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:bg-white/10 dark:text-white"
+      ? "bg-[#FDFBF7] font-medium text-[#141414] dark:bg-white/10 dark:text-white"
       : "text-black/60 dark:text-white/60",
     !isActive && !isSoon && "hover:bg-[#E4DACC] hover:text-[#141414] dark:hover:bg-white/5 dark:hover:text-white"
   );
@@ -44,7 +44,7 @@ function SidebarItem({ icon: Icon, label, href, isActive, isSoon }: SidebarItemP
       <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={1.75} />
       <span className="flex-1">{label}</span>
       {isSoon && (
-        <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-black/60 dark:bg-white/10 dark:text-white/60">
+        <span className="rounded-full bg-[#E0D5C7] px-2.5 py-0.5 text-[12px] text-black/70 dark:bg-white/10 dark:text-white/60">
           Soon
         </span>
       )}
@@ -86,7 +86,7 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
             compact ? "p-1" : "w-full p-2"
           )}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white dark:border-white/10 dark:bg-white/10">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDFBF7] dark:bg-white/10">
             <Image src="/favicon-32x32.png" alt="" width={20} height={20} />
           </span>
           {!compact && (
@@ -144,7 +144,7 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
 
 function Logo() {
   return (
-    <Link href="/dashboard" className="relative block h-[34px] w-[124px]">
+    <Link href="/dashboard" className="relative block h-[26px] w-[92px]">
       <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
       <Image src="/numo_logo_white.png" alt="Numo" fill className="hidden object-contain object-left dark:block" priority />
     </Link>
@@ -157,8 +157,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#EDE5DA] dark:bg-[#0A0A0A] md:flex-row">
       {/* Sidebar */}
-      <aside className="hidden w-[260px] shrink-0 flex-col overflow-y-auto px-4 pb-4 pt-8 md:flex">
-        <div className="mb-10 pl-3">
+      <aside className="hidden w-[275px] shrink-0 flex-col overflow-y-auto px-6 pb-5 pt-8 md:flex">
+        <div className="mb-8 pl-3.5">
           <Logo />
         </div>
 
@@ -169,7 +169,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/account"} />
           </div>
 
-          <p className="mb-2 mt-8 px-3 text-[13px] text-black/60 dark:text-white/50">Products</p>
+          <p className="mb-2 mt-8 px-3.5 text-[12px] text-black/60 dark:text-white/50">Products</p>
           <div className="space-y-0.5">
             <SidebarItem icon={ArrowRightLeft} label="Exchange" href="/send" isActive={pathname === "/send"} />
             <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" isSoon />
@@ -186,7 +186,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content */}
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F6F0E9] dark:bg-[#111111] md:mr-2.5 md:mt-2.5 md:rounded-t-[20px] md:border md:border-b-0 md:border-black/10 dark:md:border-white/10">
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#F6F0E9] dark:bg-[#111111] md:my-3 md:mr-3 md:rounded-[28px]">
         {children}
       </main>
     </div>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { cn } from "@/lib/utils";
 
@@ -190,19 +190,20 @@ function LockRateForm() {
 }
 
 /** The dashboard's "Move money" button: its menu of actions and the Lock rate dialog. */
-export function MoveMoney() {
+export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [isLockRateOpen, setIsLockRateOpen] = useState(false);
 
   return (
     <>
       {/* Not modal: a modal menu handing focus to a dialog leaves the page unclickable after it closes. */}
-      <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
         <DropdownMenu.Trigger asChild>
           <button
             type="button"
-            className="flex h-9 shrink-0 items-center rounded-full bg-[#141414] px-4 text-[14px] text-white outline-none transition-colors hover:bg-black focus-visible:ring-2 focus-visible:ring-black/30 dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
+            className="flex h-[46px] shrink-0 items-center gap-2 rounded-full bg-[#141414] px-[22px] text-[15px] font-medium text-white outline-none transition-colors hover:bg-black focus-visible:ring-2 focus-visible:ring-black/30 dark:bg-white dark:text-[#141414] dark:hover:bg-white/90"
           >
             Move money
+            <ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
