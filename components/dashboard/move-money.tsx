@@ -27,7 +27,9 @@ const MENU_ITEM =
   "flex h-[42px] items-center justify-between rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
 const MENU_CONTENT =
   "z-50 rounded-2xl bg-white p-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:bg-[#1A1A1A]";
-const FIELD_LABEL = "block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
+const LARGE_FIGURE = "font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]";
+const FIGURE_CAPTION = "mt-2 h-5 text-center text-[13px]";
+const FIELD_LABEL ="block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
 const FIELD_PILL =
   "mt-2 flex h-12 w-full items-center gap-3 rounded-full bg-[#EFE7DC] px-[18px] outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
 const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
@@ -64,7 +66,7 @@ function LockRateForm() {
         event.preventDefault();
       }}
     >
-      <div className="flex items-baseline justify-center font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]">
+      <div className={cn(LARGE_FIGURE, "flex items-baseline justify-center")}>
         <span className="text-black/40 dark:text-white/50">{account.symbol}</span>
         <input
           autoFocus
@@ -85,7 +87,7 @@ function LockRateForm() {
       <p
         aria-live="polite"
         className={cn(
-          "mt-2 h-5 text-center text-[13px]",
+          FIGURE_CAPTION,
           exceedsBalance ? "text-[#B4412F] dark:text-[#E98A7A]" : "text-black/60 dark:text-white/60"
         )}
       >
@@ -179,23 +181,15 @@ function LockRateForm() {
         </DropdownMenu.Root>
       </div>
 
-      <div className="mt-4">
-        <p className={FIELD_LABEL}>Forward rate</p>
-        <div className={FIELD_PILL}>
-          {forwardRate === null ? (
-            <span className="text-[16px] text-black/60 dark:text-white/60">{rateMessage}</span>
-          ) : (
-            <>
-              <span className="text-[16px] font-medium text-[#141414] dark:text-white">
-                {forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cNGN per USDC
-              </span>
-              <span className={cn(AVAILABLE, "ml-auto flex shrink-0 items-center gap-1.5")}>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#2E9E6B]" aria-hidden="true" />
-                Live
-              </span>
-            </>
-          )}
-        </div>
+      <div className="mt-6">
+        <p className={cn(LARGE_FIGURE, "text-center", forwardRate === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
+          {forwardRate === null
+            ? "—"
+            : forwardRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+        <p className={cn(FIGURE_CAPTION, "text-black/60 dark:text-white/60")}>
+          {forwardRate === null ? rateMessage : "Forward rate in cNGN per USDC"}
+        </p>
       </div>
 
       <button
