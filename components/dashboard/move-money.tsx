@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ArrowRight, ChevronDown } from "lucide-react";
@@ -11,7 +10,7 @@ import { cn } from "@/lib/utils";
 const DESCRIPTION_MAX = 80;
 const UNTIL_MONTHS = ["NOV", "DEC", "JAN", "FEB", "MAR", "APR", "MAY"];
 // No flow behind these yet.
-const SOON_ACTIONS = ["Direct", "Request", "Deposit", "Withdraw", "Transfer"];
+const SOON_ACTIONS = ["Exchange", "Direct", "Request", "Deposit", "Withdraw", "Transfer"];
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -213,13 +212,6 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
               className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
             >
               Lock rate
-            </DropdownMenu.Item>
-            {/* The sidebar that also links to Exchange is hidden on phones. */}
-            <DropdownMenu.Item
-              asChild
-              className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-            >
-              <Link href="/send">Exchange</Link>
             </DropdownMenu.Item>
             {SOON_ACTIONS.map((action) => (
               <DropdownMenu.Item key={action} disabled className={cn(MENU_ITEM, "text-black/45 dark:text-white/40")}>
