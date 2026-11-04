@@ -22,21 +22,12 @@ export default function TradePage() {
         {/* Greeting */}
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-[32px] font-semibold leading-[36px] tracking-[-0.03em] text-[#141414] dark:text-white">
-            {user?.firstName ? (
-              <>
-                Welcome back,
-                <br />
-                {user.firstName}
-              </>
-            ) : (
-              "Welcome back"
-            )}
+            {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
           </h1>
           <MoveMoney open={isMoveMoneyOpen} onOpenChange={setIsMoveMoneyOpen} />
         </div>
 
-        {/* The two-line greeting already stands taller than the button beside it. */}
-        <div className={user?.firstName ? "mt-2" : "mt-8"}>
+        <div className="mt-8">
           <BalanceHeader accountCreatedAt={user?.createdAt ?? null} />
         </div>
 
