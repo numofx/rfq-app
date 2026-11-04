@@ -22,7 +22,7 @@ export default function TradePage() {
           <div className="min-w-0 text-[15px]">
             <p className="text-[#141414] dark:text-white">Welcome to Numo</p>
             <p className="mt-0.5 text-black/55 dark:text-white/60">
-              Your account is ready. Swap between USDC and cNGN.
+              Your account is ready. Exchange between USDC and cNGN.
             </p>
           </div>
         </div>

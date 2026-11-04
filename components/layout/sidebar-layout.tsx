@@ -171,7 +171,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
           <p className="mb-2 mt-8 px-3 text-[13px] text-black/60 dark:text-white/50">Products</p>
           <div className="space-y-0.5">
-            <SidebarItem icon={ArrowRightLeft} label="Swap" href="/send" isActive={pathname === "/send"} />
+            <SidebarItem icon={ArrowRightLeft} label="Exchange" href="/send" isActive={pathname === "/send"} />
             <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" isSoon />
           </div>
         </nav>

@@ -213,12 +213,12 @@ export function MoveMoney() {
             >
               Lock rate
             </DropdownMenu.Item>
-            {/* The sidebar that also links to Swap is hidden on phones. */}
+            {/* The sidebar that also links to Exchange is hidden on phones. */}
             <DropdownMenu.Item
               asChild
               className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
             >
-              <Link href="/send">Swap</Link>
+              <Link href="/send">Exchange</Link>
             </DropdownMenu.Item>
             {SOON_ACTIONS.map((action) => (
               <DropdownMenu.Item key={action} disabled className={cn(MENU_ITEM, "text-black/45 dark:text-white/40")}>
