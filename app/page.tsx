@@ -800,16 +800,16 @@ export default function HomePage() {
             >
             {view === "login" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
-                  <div className="space-y-3">
+                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
+                  <div className="space-y-5">
                     <div className="flex justify-center">
-                      <div className="relative h-11 w-[160px]">
+                      <div className="relative h-9 w-[130px]">
                         <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
+                    <div className="space-y-1.5 text-center">
+                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
                         Log in
                       </h1>
                       <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
@@ -833,13 +833,13 @@ export default function HomePage() {
                           setLoginErrorMessage("");
                           setAuthDebugInfo("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black/10 ${
+                        className={`h-12 w-full rounded-full border px-5 text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04] ${
                           isLoginEmailError
                             ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-[#F6F0E9] hover:border-black/20"
+                            : "border-black/10 bg-[#FAF6F0] hover:border-black/20"
                         }`}
                       />
-                      {isLoginEmailError ? <p className="mt-2 text-[12px] text-red-500">{loginErrorMessage}</p> : null}
+                      {isLoginEmailError ? <p className="mt-2 pl-5 text-[12px] text-red-500">{loginErrorMessage}</p> : null}
                     </div>
 
                     <div>
@@ -847,10 +847,10 @@ export default function HomePage() {
                         Password
                       </label>
                       <div
-                        className={`flex h-12 items-center rounded-lg border px-3 transition-colors ${
+                        className={`flex h-12 items-center rounded-full border pl-5 pr-2 transition-colors ${
                           isLoginPasswordError
                             ? "border-red-500 bg-red-50"
-                            : "border-black/10 bg-[#F6F0E9] hover:border-black/20 focus-within:border-black/30"
+                            : "border-black/10 bg-[#FAF6F0] hover:border-black/20 focus-within:border-black/30 focus-within:ring-4 focus-within:ring-black/[0.04]"
                         }`}
                       >
                         <input
@@ -865,17 +865,17 @@ export default function HomePage() {
                             setLoginErrorMessage("");
                             setAuthDebugInfo("");
                           }}
-                          className="h-full w-full bg-transparent text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword((prev) => !prev)}
-                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-black/10 bg-white text-black/60 hover:text-black/80"
+                          className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-black/45 transition hover:bg-black/5 hover:text-[#141414]"
                           aria-label={showPassword ? "Hide password" : "Show password"}
                         >
                           <svg
                             viewBox="0 0 24 24"
-                            className="h-[12px] w-[12px]"
+                            className="h-4 w-4"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
@@ -890,14 +890,21 @@ export default function HomePage() {
                         </button>
                       </div>
                       {isLoginPasswordError ? (
-                        <p className="mt-2 text-[12px] text-red-500">{loginErrorMessage}</p>
+                        <p className="mt-2 pl-5 text-[12px] text-red-500">{loginErrorMessage}</p>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="ml-auto mt-2 block pr-5 text-[13px] text-black/55 transition hover:text-[#141414]"
+                      >
+                        Forgot your password?
+                      </button>
                     </div>
 
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       Log in
                     </button>
@@ -906,19 +913,12 @@ export default function HomePage() {
                   {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
                   {statusMessage ? <p className="text-[12px] text-gray-500">{statusMessage}</p> : null}
                   {authDebugInfo ? <p className="text-[11px] text-amber-600/90">{authDebugInfo}</p> : null}
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="mt-3 w-full text-right text-xs text-black/50 transition hover:text-[#141414]"
-                  >
-                    Forgot your password?
-                  </button>
-                  <p className="mt-5 flex items-baseline justify-center gap-2">
-                    <span className="text-xs text-black/50">New to Numo?</span>
+                  <p className="flex items-baseline justify-center gap-2 border-t border-black/[0.07] pt-5">
+                    <span className="text-[13px] text-black/55">New to Numo?</span>
                     <button
                       type="button"
                       onClick={() => switchAuthView("signup")}
-                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-[#141414]"
+                      className="text-[13px] font-medium text-[#141414] underline decoration-black/25 underline-offset-4 transition hover:decoration-black"
                     >
                       Create account
                     </button>
@@ -927,16 +927,16 @@ export default function HomePage() {
               </>
             ) : view === "signup" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
-                  <div className="space-y-3">
+                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
+                  <div className="space-y-5">
                     <div className="flex justify-center">
-                      <div className="relative h-11 w-[160px]">
+                      <div className="relative h-9 w-[130px]">
                         <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
+                    <div className="space-y-1.5 text-center">
+                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
                         Create account
                       </h1>
                       <p className="text-sm text-black/60">Lock in exchange rates ahead of time.</p>
@@ -952,10 +952,10 @@ export default function HomePage() {
                         <input
                           id="first-name"
                           type="text"
-                          placeholder="Enter your first name"
+                          placeholder="First name"
                           value={firstName}
                           onChange={(event) => setFirstName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
+                          className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
                         />
                       </div>
                       <div>
@@ -965,10 +965,10 @@ export default function HomePage() {
                         <input
                           id="last-name"
                           type="text"
-                          placeholder="Enter your last name"
+                          placeholder="Last name"
                           value={lastName}
                           onChange={(event) => setLastName(event.target.value)}
-                          className="h-12 w-full rounded-lg border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
+                          className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
                         />
                       </div>
                     </div>
@@ -987,8 +987,8 @@ export default function HomePage() {
                           setSignupEmail(event.target.value);
                           setAuthError("");
                         }}
-                        className={`h-12 w-full rounded-lg border px-3 text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black/10 ${
-                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-[#F6F0E9] hover:border-black/20"
+                        className={`h-12 w-full rounded-full border px-5 text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04] ${
+                          authError ? "border-red-500 bg-red-50" : "border-black/10 bg-[#FAF6F0] hover:border-black/20"
                         }`}
                       />
                     </div>
@@ -996,19 +996,19 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Checking..." : "Create account"}
                     </button>
                   </form>
 
                   {authError ? <p className="text-[12px] text-red-500">{authError}</p> : null}
-                  <p className="mt-5 flex items-baseline justify-center gap-2">
-                    <span className="text-xs text-black/50">Already have an account?</span>
+                  <p className="flex items-baseline justify-center gap-2 border-t border-black/[0.07] pt-5">
+                    <span className="text-[13px] text-black/55">Already have an account?</span>
                     <button
                       type="button"
                       onClick={() => switchAuthView("login")}
-                      className="text-xs font-medium text-black/80 underline underline-offset-4 transition hover:text-[#141414]"
+                      className="text-[13px] font-medium text-[#141414] underline decoration-black/25 underline-offset-4 transition hover:decoration-black"
                     >
                       Log in
                     </button>
@@ -1017,16 +1017,16 @@ export default function HomePage() {
               </>
             ) : view === "verify" ? (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8 text-center">
-                  <div className="space-y-3">
+                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)] text-center">
+                  <div className="space-y-5">
                     <div className="flex justify-center">
-                      <div className="relative h-11 w-[160px]">
+                      <div className="relative h-9 w-[130px]">
                         <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
+                    <div className="space-y-1.5 text-center">
+                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
                         Verify your email
                       </h1>
                       <p className="text-sm text-black/60">Confirm your address to finish account setup</p>
@@ -1042,7 +1042,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px"
+                    className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px"
                   >
                     Resend verification email
                   </button>
@@ -1061,16 +1061,16 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <div className="space-y-5 rounded-[16px] border border-black/10 bg-white px-10 pt-10 pb-8">
-                  <div className="space-y-3">
+                <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
+                  <div className="space-y-5">
                     <div className="flex justify-center">
-                      <div className="relative h-11 w-[160px]">
+                      <div className="relative h-9 w-[130px]">
                         <Image src="/numo.png" alt="Numo" fill className="object-contain" />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <h1 className="text-3xl font-semibold tracking-tight text-[#141414] md:text-4xl">
+                    <div className="space-y-1.5 text-center">
+                      <h1 className="text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
                         Create your password
                       </h1>
                       <p className="text-sm text-black/60">Finish setting up your Numo account</p>
@@ -1080,7 +1080,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setView("signup")}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-black/10 bg-[#F6F0E9] text-[16px] text-black/60 transition hover:bg-[#EDE5DA]"
+                    className="absolute left-6 top-6 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-black/10 bg-[#FAF6F0] text-[16px] text-black/60 transition hover:bg-[#EDE5DA]"
                     aria-label="Back to sign up"
                   >
                     &larr;
@@ -1091,24 +1091,24 @@ export default function HomePage() {
                       <label htmlFor="new-password" className="sr-only">
                         Password
                       </label>
-                      <div className="flex h-12 items-center rounded-lg border border-black/10 bg-[#F6F0E9] px-3 transition-colors hover:border-black/20 focus-within:border-black/30">
+                      <div className="flex h-12 items-center rounded-full border border-black/10 bg-[#FAF6F0] pl-5 pr-2 transition-colors hover:border-black/20 focus-within:border-black/30 focus-within:ring-4 focus-within:ring-black/[0.04]">
                         <input
                           id="new-password"
                           type={showCreatePassword ? "text" : "password"}
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-[13px] text-[#141414] placeholder:text-black/40 focus:outline-none"
+                          className="h-full w-full bg-transparent text-[14px] text-[#141414] placeholder:text-black/40 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCreatePassword((prev) => !prev)}
-                          className="ml-2 flex h-[30px] w-[30px] items-center justify-center rounded-[10px] border border-black/10 bg-white text-black/60 hover:text-black/80"
+                          className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-black/45 transition hover:bg-black/5 hover:text-[#141414]"
                           aria-label={showCreatePassword ? "Hide password" : "Show password"}
                         >
                           <svg
                             viewBox="0 0 24 24"
-                            className="h-[12px] w-[12px]"
+                            className="h-4 w-4"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
@@ -1127,7 +1127,7 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={isAuthBusy}
-                      className="h-12 w-full rounded-lg border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                      className="h-12 w-full rounded-full border border-transparent bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthBusy ? "Creating..." : "Continue →"}
                     </button>

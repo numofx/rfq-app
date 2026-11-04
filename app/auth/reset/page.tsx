@@ -81,9 +81,9 @@ export default function ResetPasswordPage() {
   return (
     <AppLayout showLogoSuffix={false} className="bg-[#F6F0E9] text-[#141414]">
       <ContentLayout variant="auth">
-        <CardWrapper size="auth" className="max-w-sm">
-          <div className="space-y-5 rounded-[16px] border border-black/10 bg-white p-8">
-            <h1 className="text-[24px] leading-none font-semibold tracking-[-0.02em] text-[#141414]">
+        <CardWrapper size="auth" className="max-w-[420px]">
+          <div className="relative space-y-6 rounded-[20px] border border-black/10 bg-[#FFFDFA] px-10 pt-10 pb-8 shadow-[0_0_0_10px_#EDE5DA,0_24px_70px_rgba(60,40,20,0.14)]">
+            <h1 className="text-center text-[30px] font-medium leading-tight tracking-[-0.03em] text-[#141414]">
               Reset your password
             </h1>
 
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
                     placeholder="Enter a new password"
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    className="h-[42px] w-full rounded-[12px] border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
+                    className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
                   />
                 </div>
 
@@ -115,14 +115,14 @@ export default function ResetPasswordPage() {
                     placeholder="Confirm your new password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-[42px] w-full rounded-[12px] border border-black/10 bg-[#F6F0E9] px-3 text-[13px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-black/10"
+                    className="h-12 w-full rounded-full border border-black/10 bg-[#FAF6F0] px-5 text-[14px] text-[#141414] placeholder:text-black/40 hover:border-black/20 focus:outline-none focus:border-black/30 focus:ring-4 focus:ring-black/[0.04]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="h-[42px] w-full rounded-[12px] bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                  className="h-12 w-full rounded-full bg-[#141414] text-[14px] font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isBusy ? "Updating..." : "Update password →"}
                 </button>
