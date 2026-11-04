@@ -24,7 +24,8 @@ const getReadableAuthError = (message: string) => {
   if (normalized.includes("rate limit")) {
     return "Too many attempts. Please wait a minute and try again.";
   }
-  if (normalized.includes("network")) {
+  // Chrome reports "Failed to fetch", Safari "Load failed" and Firefox "NetworkError...".
+  if (normalized.includes("network") || normalized.includes("failed to fetch") || normalized.includes("load failed")) {
     return "Network error while reaching authentication services. Please try again.";
   }
 
