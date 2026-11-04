@@ -15,9 +15,7 @@ export function AccountCards() {
       <div className={`mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 ${PANEL_TRAY}`}>
         {ACCOUNTS.map(({ iconSrc, currency, symbol, balance }) => (
           <div key={currency} className={`flex items-center gap-4 p-5 ${PANEL_CARD}`}>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F6F0E9] dark:bg-white/5">
-              <Image src={iconSrc} alt="" width={28} height={28} className="h-7 w-7 rounded-full object-cover" />
-            </div>
+            <Image src={iconSrc} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-medium text-[#141414] dark:text-white">{currency}</p>
               <p className="mt-0.5 font-mono text-[14px] text-black/70 dark:text-white/70">
