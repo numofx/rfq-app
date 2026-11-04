@@ -36,7 +36,6 @@ const AVAILABLE = "font-mono text-[13px] text-black/60 dark:text-white/60";
 /** Mounted only while the dialog is open, so closing it clears the form. */
 function LockRateForm() {
   const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
   const [description, setDescription] = useState("");
   const [accountCode, setAccountCode] = useState(ACCOUNTS[0].currency);
   const [until, setUntil] = useState(UNTIL_DATES[0]);
@@ -45,7 +44,7 @@ function LockRateForm() {
   const value = Number(amount);
   const exceedsBalance = value > Number(account.balance);
   // Nothing locks a rate yet and every balance is a placeholder 0.00, so this stays false.
-  const canLockRate = value > 0 && !exceedsBalance && recipient.trim() !== "";
+  const canLockRate = value > 0 && !exceedsBalance;
 
   return (
     <form
@@ -83,22 +82,6 @@ function LockRateForm() {
       </p>
 
       <div className="mt-6">
-        <label htmlFor="lock-rate-to" className={FIELD_LABEL}>
-          To
-        </label>
-        <div className={FIELD_PILL}>
-          <input
-            id="lock-rate-to"
-            placeholder="Email, phone, ID, or @handle"
-            autoComplete="off"
-            value={recipient}
-            onChange={(event) => setRecipient(event.target.value)}
-            className={FIELD_INPUT}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4">
         <span id="lock-rate-from" className={FIELD_LABEL}>
           From
         </span>
