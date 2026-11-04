@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLayout, CardWrapper, ContentLayout } from "@/components/layout/page-shell";
+import { getReadableResetError } from "@/lib/auth-errors";
 import { supabase } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -26,14 +27,14 @@ export default function ResetPasswordPage() {
       }
 
       if (errorDescription) {
-        setAuthError(decodeURIComponent(errorDescription));
+        setAuthError(getReadableResetError(decodeURIComponent(errorDescription)));
         return;
       }
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setAuthError(error.message);
+          setAuthError(getReadableResetError(error.message));
           return;
         }
       }
@@ -67,7 +68,7 @@ export default function ResetPasswordPage() {
       setIsBusy(true);
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
-        setAuthError(error.message);
+        setAuthError(getReadableResetError(error.message));
         return;
       }
       setStatusMessage("Password updated. You can now log in.");
@@ -88,7 +89,7 @@ export default function ResetPasswordPage() {
             </h1>
 
             {!isReady ? (
-              <p className="text-[13px] text-black/55">Preparing password reset...</p>
+              authError ? null : <p className="text-center text-[13px] text-black/55">Preparing password reset...</p>
             ) : (
               <form className="space-y-4" aria-label="Reset password form" onSubmit={handleResetSubmit}>
                 <div>

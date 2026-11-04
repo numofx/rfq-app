@@ -4,33 +4,11 @@ import { FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLayout, CardWrapper, ContentLayout, containerClass } from "@/components/layout/page-shell";
+import { getReadableAuthError } from "@/lib/auth-errors";
 import { supabase } from "@/lib/supabase/client";
 
 type View = "login" | "signup" | "password" | "verify" | "team";
 type LoginErrorField = "email" | "password" | null;
-
-const getReadableAuthError = (message: string) => {
-  const normalized = message.toLowerCase();
-  const domainNotVerifiedMatch = message.match(/550 The ([^ ]+) domain is not verified/i);
-
-  if (domainNotVerifiedMatch) {
-    const failedDomain = domainNotVerifiedMatch[1];
-    return `Email sender domain mismatch: ${failedDomain} is not verified in Resend. In Supabase Auth email settings, use a sender from your verified domain/subdomain (for example @noreply.numofx.com), or verify ${failedDomain} in Resend.`;
-  }
-
-  if (normalized.includes("confirmation email") || normalized.includes("smtp")) {
-    return "We couldn't send the verification email. Check your Supabase Auth email provider/SMTP settings and try again.";
-  }
-  if (normalized.includes("rate limit")) {
-    return "Too many attempts. Please wait a minute and try again.";
-  }
-  // Chrome reports "Failed to fetch", Safari "Load failed" and Firefox "NetworkError...".
-  if (normalized.includes("network") || normalized.includes("failed to fetch") || normalized.includes("load failed")) {
-    return "Network error while reaching authentication services. Please try again.";
-  }
-
-  return message;
-};
 
 const getAuthRedirectUrl = () => {
   const explicitRedirectUrl = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL?.trim();
