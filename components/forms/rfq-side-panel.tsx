@@ -206,7 +206,7 @@ export function RFQSidePanel({
                   color: "hsl(var(--text))",
                 }}
                 labelFormatter={(value) => `${pair} @ Expiry ${formatTwo(Number(value))}`}
-                formatter={(value: number) => [`${formatWhole(value)}`, "Payout"]}
+                formatter={(value) => [`${formatWhole(Number(value))}`, "Payout"]}
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
               <ReferenceLine
@@ -299,7 +299,7 @@ export function RFQSidePanel({
                   fontSize: 11,
                   color: "hsl(var(--text))",
                 }}
-                formatter={(value: number) => [`${formatTwo(value)} ${quoteCurrency}/${baseCurrency}`, "Spot"]}
+                formatter={(value) => [`${formatTwo(Number(value))} ${quoteCurrency}/${baseCurrency}`, "Spot"]}
               />
               <ReferenceLine y={safeStrike} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
               {breakeven ? <ReferenceLine y={breakeven} stroke="hsl(var(--muted))" strokeDasharray="3 3" /> : null}
@@ -340,7 +340,7 @@ export function RFQSidePanel({
                   color: "hsl(var(--text))",
                 }}
                 labelFormatter={(value) => `Spot ${formatTwo(Number(value))}`}
-                formatter={(value: number) => [`${formatTwo(value)} USD`, "Profit @ Expiry"]}
+                formatter={(value) => [`${formatTwo(Number(value))} USD`, "Profit @ Expiry"]}
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted))" strokeDasharray="4 4" />
               <Line

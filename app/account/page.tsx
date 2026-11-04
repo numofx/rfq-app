@@ -116,6 +116,9 @@ export default function AccountPage() {
             : ["Email & Password"]
         );
 
+        // The guard outside this callback doesn't narrow the import in here.
+        if (!supabase) return;
+
         const [{ data: factorsData }, { data: aalData }] = await Promise.all([
           supabase.auth.mfa.listFactors(),
           supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
