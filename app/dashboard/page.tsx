@@ -7,7 +7,7 @@ import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { BalanceHeader } from "@/components/dashboard/balance-header";
 import { AccountCards } from "@/components/dashboard/account-cards";
 import { MoveMoney } from "@/components/dashboard/move-money";
-import { TransactionsEmpty } from "@/components/dashboard/transactions-empty";
+import { TransactionsList } from "@/components/dashboard/transactions-list";
 import { accountHoldings, WithTradeSession } from "@/components/dashboard/trade-session";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
@@ -58,7 +58,7 @@ export default function TradePage() {
               View all
             </Link>
           </div>
-          <TransactionsEmpty />
+          <TransactionsList limit={5} />
         </section>
       </div>
     </SidebarLayout>

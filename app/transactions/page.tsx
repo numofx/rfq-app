@@ -1,6 +1,6 @@
 "use client";
 
-import { TransactionsEmpty } from "@/components/dashboard/transactions-empty";
+import { TransactionsList } from "@/components/dashboard/transactions-list";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 
 export default function TransactionsPage() {
@@ -11,7 +11,7 @@ export default function TransactionsPage() {
           Transactions
         </h1>
         <div className="mt-4">
-          <TransactionsEmpty />
+          <TransactionsList />
         </div>
       </div>
     </SidebarLayout>

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { CNGN_ASSET, TRADING_MANAGER_ADDRESS, USDC_CASH_ASSET } from "@/lib/venue/config";
 import { readWalletUsdc } from "@/lib/venue/deposit";
+import { readTransactions } from "@/lib/venue/transactions";
 import type { VenueMarket, VenueSymbol } from "@/lib/venue/market";
 import { findTradingSubaccountId, LEDGER_DECIMALS, readBalanceHistory, readLedgerBalances } from "@/lib/venue/subaccount";
 
@@ -141,4 +142,16 @@ export function useBalanceHistory(subaccountId: string | null, rangeKey: string,
     retry: 1,
   });
   return { history: data ?? null, isLoading: subaccountId !== null && isPending };
+}
+
+/** The trading account's transactions, newest first. Null while loading or after a failed read. */
+export function useTransactions(subaccountId: string | null, ownerAddress: string | null) {
+  const { data, isError, isPending } = useQuery({
+    queryKey: ["transactions", subaccountId, ownerAddress],
+    queryFn: () => readTransactions(subaccountId as string, ownerAddress as string),
+    enabled: subaccountId !== null && ownerAddress !== null,
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+  return { transactions: data ?? null, isLoading: subaccountId !== null && isPending, isError };
 }

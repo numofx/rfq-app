@@ -1,6 +1,6 @@
 import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
 
-/** Nothing records transactions yet, so this is all either list can show. */
+/** An account with no activity yet. */
 export function TransactionsEmpty() {
   return (
     <div className={`mt-4 ${PANEL_TRAY}`}>

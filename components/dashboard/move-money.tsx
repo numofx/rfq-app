@@ -274,6 +274,7 @@ function AccountPicker({
 
 /** Signs and places `plan`, then reports what filled. Shared by both dialogs. */
 function useOrderSubmission(session: TradeSession | null) {
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   // Set when the order filled in full: the button says so, until the form is changed.
@@ -296,6 +297,7 @@ function useOrderSubmission(session: TradeSession | null) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "The order could not be placed." });
     } finally {
       setIsSubmitting(false);
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     }
   }
 
@@ -532,6 +534,7 @@ function DepositForm({ session }: { session: TradeSession | null }) {
       void queryClient.invalidateQueries({ queryKey: ["trading-subaccount"] });
       void queryClient.invalidateQueries({ queryKey: ["trading-balances"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     }
   }
 
@@ -686,6 +689,7 @@ function WithdrawForm({ session }: { session: TradeSession | null }) {
       setIsSubmitting(false);
       session?.refreshBalances();
       void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     }
   }
 
