@@ -142,7 +142,7 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function Logo() {
+export function Logo() {
   return (
     <Link href="/dashboard" className="relative block h-[26px] w-[92px]">
       <Image src="/numo.png" alt="Numo" fill className="object-contain object-left dark:hidden" priority />
