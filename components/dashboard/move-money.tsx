@@ -5,12 +5,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
-import { canTrade, TradeAction, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
+import { canTrade, EmailVerification, TradeAction, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
-import { useVenueMarket } from "@/lib/hooks/useTrading";
+import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
+import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
 import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
@@ -27,12 +29,12 @@ const UNTIL_DATES = [
 // The only date with a listed book: cNGN-30NOV26.
 const QUOTED_UNTIL = UNTIL_DATES[0];
 // No flow behind these yet.
-const SOON_ACTIONS = ["Direct", "Request", "Deposit", "Withdraw", "Transfer"];
+const SOON_ACTIONS = ["Direct", "Request", "Withdraw", "Transfer"];
 
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
 type Status = { tone: "neutral" | "error"; text: string } | null;
-type DialogKind = "lock-rate" | "exchange";
+type DialogKind = "lock-rate" | "exchange" | "deposit";
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -466,6 +468,141 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
   );
 }
 
+const PRIMARY_BUTTON =
+  "h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40";
+const NOTE = "mt-3 text-center text-[13px] text-black/60 dark:text-white/60";
+
+/**
+ * Moves USDC from the trading wallet into its trading account, opening the account on the first
+ * deposit. The venue pays the gas, so the wallet only needs the USDC. Mounted only while open.
+ */
+function DepositForm({ session }: { session: TradeSession | null }) {
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<Status>(null);
+  const [copied, setCopied] = useState(false);
+  const address = session?.wallet?.address ?? null;
+  const walletUsdc = useWalletUsdc(address);
+  const usdc = ACCOUNTS[0];
+
+  const value = Number(amount);
+  const isBelowMinimum = value > 0 && value < MIN_DEPOSIT_USDC;
+  const exceedsWallet = walletUsdc !== null && value > walletUsdc;
+  let caption = "Amount in USDC";
+  if (isBelowMinimum) caption = `The minimum deposit is ${formatMoney("USDC", MIN_DEPOSIT_USDC)}`;
+  else if (exceedsWallet) caption = "More than your wallet holds";
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!session?.wallet || session.isResolving || !(value >= MIN_DEPOSIT_USDC) || exceedsWallet) return;
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      const record = await depositUsdc({ amountUsdc: amount, subaccountId: session.subaccountId, wallet: session.wallet });
+      if (record.status === "confirmed") {
+        setStatus({ tone: "neutral", text: `Deposited ${formatMoney("USDC", value)} into your trading account.` });
+        setAmount("");
+      } else if (record.status === "reverted" || record.status === "rejected") {
+        setStatus({ tone: "error", text: record.error || "The deposit didn't go through. Nothing was moved." });
+      } else {
+        setStatus({ tone: "neutral", text: "Deposit submitted. It can take a minute to show in your account." });
+      }
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "The deposit could not be sent." });
+    } finally {
+      setIsSubmitting(false);
+      void queryClient.invalidateQueries({ queryKey: ["trading-subaccount"] });
+      void queryClient.invalidateQueries({ queryKey: ["trading-balances"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+    }
+  }
+
+  let action: ReactNode;
+  if (session === null) {
+    action = (
+      <>
+        <button type="button" disabled className={PRIMARY_BUTTON}>Deposit</button>
+        <p className={NOTE}>Deposits aren&apos;t available yet.</p>
+      </>
+    );
+  } else if (!session.isReady) {
+    action = <button type="button" disabled className={PRIMARY_BUTTON}>Loading</button>;
+  } else if (!session.isAuthenticated) {
+    action = <EmailVerification session={session} />;
+  } else {
+    const isWaiting = session.wallet === null || session.isResolving;
+    action = (
+      <>
+        <button
+          type="submit"
+          disabled={isWaiting || isSubmitting || !(value >= MIN_DEPOSIT_USDC) || exceedsWallet}
+          className={PRIMARY_BUTTON}
+        >
+          {isSubmitting ? "Depositing" : "Deposit"}
+        </button>
+        <p aria-live="polite" className={cn(NOTE, "min-h-5", status?.tone === "error" && ERROR_TEXT)}>
+          {status?.text ?? (isWaiting ? "Finding your trading account" : session.subaccountId === null ? "Your first deposit opens your trading account." : "")}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <form className="mt-5" onSubmit={onSubmit}>
+      <AmountField
+        account={usdc}
+        amount={amount}
+        onAmountChange={(next) => {
+          setAmount(next);
+          setStatus(null);
+        }}
+        caption={caption}
+        isError={isBelowMinimum || exceedsWallet}
+      />
+
+      <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
+        <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
+          <p className="min-w-0 font-medium text-[#141414] dark:text-white">
+            Wallet <span className="text-[13px] font-normal text-black/60 dark:text-white/60">USDC on Base</span>
+          </p>
+          <p className="shrink-0 font-mono text-[20px] font-semibold leading-none text-[#141414] dark:text-white">
+            {walletUsdc === null ? "—" : formatMoney("USDC", walletUsdc)}
+          </p>
+        </div>
+        {address ? (
+          <div className="mx-[18px] border-t border-black/[0.07] pb-3.5 pt-3 dark:border-white/10">
+            <p className="text-black/70 dark:text-white/70">Send USDC on Base to this address to fund your wallet.</p>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(address)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => {});
+              }}
+              aria-label={copied ? "Wallet address copied" : "Copy wallet address"}
+              className="mt-2 flex w-full items-center gap-2 rounded-xl bg-[#FDFBF7] px-3 py-2.5 text-left font-mono text-[12px] text-[#141414] outline-none transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              <span className="min-w-0 flex-1 break-all">{address}</span>
+              {copied ? (
+                <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden="true" />
+              ) : (
+                <Copy className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-5">{action}</div>
+    </form>
+  );
+}
+
 function TradeDialog({ title, open, onOpenChange, children }: { title: string; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -501,7 +638,7 @@ function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
   const action = searchParams.get("action");
 
   useEffect(() => {
-    if (action === "exchange" || action === "lock-rate") {
+    if (action === "exchange" || action === "lock-rate" || action === "deposit") {
       onOpen(action);
       router.replace(pathname);
     }
@@ -538,6 +675,7 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
               [
                 ["lock-rate", "Lock rate"],
                 ["exchange", "Exchange"],
+                ["deposit", "Deposit"],
               ] as const
             ).map(([kind, label]) => (
               <DropdownMenu.Item
@@ -565,6 +703,9 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
       </TradeDialog>
       <TradeDialog title="Exchange" open={dialog === "exchange"} onOpenChange={closeUnless("exchange")}>
         <WithTradeSession>{(session) => <ExchangeForm session={session} />}</WithTradeSession>
+      </TradeDialog>
+      <TradeDialog title="Deposit" open={dialog === "deposit"} onOpenChange={closeUnless("deposit")}>
+        <WithTradeSession>{(session) => <DepositForm session={session} />}</WithTradeSession>
       </TradeDialog>
     </>
   );

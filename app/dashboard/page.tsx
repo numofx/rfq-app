@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { BalanceHeader } from "@/components/dashboard/balance-header";
 import { AccountCards } from "@/components/dashboard/account-cards";
@@ -12,13 +13,13 @@ import { useAccountUser } from "@/lib/hooks/useAccountUser";
 
 export default function TradePage() {
   const user = useAccountUser();
+  const router = useRouter();
   const [isMoveMoneyOpen, setIsMoveMoneyOpen] = useState(false);
 
   return (
     <SidebarLayout>
       <div className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-6 md:px-12 md:pt-8">
-        {/* Deposits have no flow yet, so Add funds opens the menu that shows Deposit as coming soon. */}
-        <WelcomeBanner onAddFunds={() => setIsMoveMoneyOpen(true)} />
+        <WelcomeBanner onAddFunds={() => router.push("/dashboard?action=deposit")} />
 
         {/* Greeting */}
         <div className="flex items-start justify-between gap-4">

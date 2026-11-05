@@ -4,6 +4,7 @@ import { useLoginWithEmail, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { CNGN_ASSET, TRADING_MANAGER_ADDRESS, USDC_CASH_ASSET } from "@/lib/venue/config";
+import { readWalletUsdc } from "@/lib/venue/deposit";
 import type { VenueMarket, VenueSymbol } from "@/lib/venue/market";
 import { findTradingSubaccountId, LEDGER_DECIMALS, readLedgerBalances } from "@/lib/venue/subaccount";
 
@@ -43,6 +44,18 @@ export function useVenueMarket(symbol: VenueSymbol) {
     retry: 1,
   });
   return { market: isError ? null : (data ?? null), isPending };
+}
+
+/** The wallet's own USDC on Base, before it is deposited. Null while loading or after a failed read. */
+export function useWalletUsdc(walletAddress: string | null) {
+  const { data } = useQuery({
+    queryKey: ["wallet-usdc", walletAddress],
+    queryFn: () => readWalletUsdc(walletAddress as string),
+    enabled: walletAddress !== null,
+    refetchInterval: BALANCE_POLL_MS,
+    retry: 1,
+  });
+  return data ?? null;
 }
 
 export type TradingBalances = { usdc: number; cngn: number; imSurplusUsd: number | null };

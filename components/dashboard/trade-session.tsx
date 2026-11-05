@@ -61,7 +61,7 @@ const PRIMARY_BUTTON =
 const NOTE = "mt-3 text-center text-[13px] text-black/60 dark:text-white/60";
 
 /** Verifies the command login's email with Privy, which opens the same wallet as the trading app. */
-function EmailVerification({ session }: { session: TradeSession }) {
+export function EmailVerification({ session }: { session: TradeSession }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   // Set only once a code has gone out, so a failed send stays on the send step.
