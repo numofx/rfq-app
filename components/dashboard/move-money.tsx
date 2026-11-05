@@ -13,6 +13,8 @@ import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forw
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
 import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
+import { TOKEN_DECIMALS, withdraw } from "@/lib/venue/withdraw";
+import { parseUnits } from "viem";
 import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
@@ -29,12 +31,12 @@ const UNTIL_DATES = [
 // The only date with a listed book: cNGN-30NOV26.
 const QUOTED_UNTIL = UNTIL_DATES[0];
 // No flow behind these yet.
-const SOON_ACTIONS = ["Direct", "Request", "Withdraw", "Transfer"];
+const SOON_ACTIONS = ["Direct", "Request", "Transfer"];
 
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
 type Status = { tone: "neutral" | "error"; text: string } | null;
-type DialogKind = "lock-rate" | "exchange" | "deposit";
+type DialogKind = "lock-rate" | "exchange" | "deposit" | "withdraw";
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -640,6 +642,142 @@ function DepositForm({ session }: { session: TradeSession | null }) {
   );
 }
 
+/**
+ * Moves funds from the trading account back to the wallet that owns it. The venue pays the gas and
+ * only ever pays the owner, so there is no address to enter. Mounted only while open.
+ */
+function WithdrawForm({ session }: { session: TradeSession | null }) {
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState<Currency>("USDC");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [status, setStatus] = useState<Status>(null);
+  const account = ACCOUNTS.find((candidate) => candidate.currency === currency) ?? ACCOUNTS[0];
+  const address = session?.wallet?.address ?? null;
+
+  const value = Number(amount);
+  const available = balanceOf(session, currency);
+  const exceedsBalance = available !== null && value > available && !isConfirmed;
+
+  function reset() {
+    setStatus(null);
+    setIsConfirmed(false);
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!canTrade(session) || !(value > 0) || exceedsBalance) return;
+    setIsSubmitting(true);
+    reset();
+    try {
+      const outcome = await withdraw({
+        amountUnits: parseUnits(amount, TOKEN_DECIMALS),
+        currency,
+        subaccountId: session.subaccountId,
+        wallet: session.wallet,
+      });
+      if (outcome.kind === "settled") setIsConfirmed(true);
+      else if (outcome.kind === "pending") setStatus({ tone: "neutral", text: "Withdrawal sent. It can take a minute to reach your wallet." });
+      else setStatus({ tone: "error", text: outcome.reason });
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "The withdrawal could not be sent." });
+    } finally {
+      setIsSubmitting(false);
+      session?.refreshBalances();
+      void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+    }
+  }
+
+  let action: ReactNode;
+  if (session === null) {
+    action = (
+      <>
+        <button type="button" disabled className={PRIMARY_BUTTON}>Withdraw</button>
+        <p className={NOTE}>Withdrawals aren&apos;t available yet.</p>
+      </>
+    );
+  } else if (!session.isReady) {
+    action = <button type="button" disabled className={PRIMARY_BUTTON}>Loading</button>;
+  } else if (!session.isAuthenticated) {
+    action = <EmailVerification session={session} />;
+  } else if (session.wallet === null) {
+    action = <WalletStep session={session} label="Withdraw" />;
+  } else if (session.subaccountId === null) {
+    action = (
+      <>
+        <button type="button" disabled className={PRIMARY_BUTTON}>Withdraw</button>
+        <p className={NOTE}>{session.isResolving ? "Finding your trading account" : "You have nothing to withdraw yet."}</p>
+      </>
+    );
+  } else {
+    action = (
+      <>
+        <button
+          type="submit"
+          disabled={isConfirmed || isSubmitting || !(value > 0) || exceedsBalance}
+          className={cn(PRIMARY_BUTTON, "flex items-center justify-center gap-2", isConfirmed && CONFIRMED_BUTTON)}
+        >
+          {isConfirmed ? (
+            <>
+              <Check className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+              Confirmed
+            </>
+          ) : isSubmitting ? (
+            "Withdrawing"
+          ) : (
+            "Withdraw"
+          )}
+        </button>
+        <p aria-live="polite" className={cn(NOTE, "min-h-5", status?.tone === "error" && ERROR_TEXT)}>
+          {isConfirmed ? "" : (status?.text ?? "")}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <form className="mt-5" onSubmit={onSubmit}>
+      <AmountField
+        account={account}
+        amount={amount}
+        onAmountChange={(next) => {
+          setAmount(next);
+          reset();
+        }}
+        caption={exceedsBalance ? "More than your trading account holds" : `Amount in ${account.currency}`}
+        isError={exceedsBalance}
+      />
+
+      <div className="mt-5">
+        <AccountPicker
+          id="withdraw-from"
+          label="From"
+          account={account}
+          session={session}
+          onSelect={(next) => {
+            setCurrency(next);
+            reset();
+          }}
+        />
+      </div>
+
+      {address ? (
+        <div className="mt-5 rounded-2xl bg-[#F3EFE9] px-[18px] py-3.5 text-[14px] dark:bg-white/5">
+          <dl>
+            <RateCardRow label="Paid to your wallet" value={`${address.slice(0, 6)}…${address.slice(-4)}`} />
+          </dl>
+          <p className="mt-2 text-[13px] text-black/60 dark:text-white/60">
+            Withdrawals go to the wallet that owns your trading account, as {account.currency} on Base.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-5">{action}</div>
+    </form>
+  );
+}
+
 function TradeDialog({ title, open, onOpenChange, children }: { title: string; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -675,7 +813,7 @@ function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
   const action = searchParams.get("action");
 
   useEffect(() => {
-    if (action === "exchange" || action === "lock-rate" || action === "deposit") {
+    if (action === "exchange" || action === "lock-rate" || action === "deposit" || action === "withdraw") {
       onOpen(action);
       router.replace(pathname);
     }
@@ -713,6 +851,7 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
                 ["lock-rate", "Lock rate"],
                 ["exchange", "Exchange"],
                 ["deposit", "Deposit"],
+                ["withdraw", "Withdraw"],
               ] as const
             ).map(([kind, label]) => (
               <DropdownMenu.Item
@@ -743,6 +882,9 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
       </TradeDialog>
       <TradeDialog title="Deposit" open={dialog === "deposit"} onOpenChange={closeUnless("deposit")}>
         <WithTradeSession>{(session) => <DepositForm session={session} />}</WithTradeSession>
+      </TradeDialog>
+      <TradeDialog title="Withdraw" open={dialog === "withdraw"} onOpenChange={closeUnless("withdraw")}>
+        <WithTradeSession>{(session) => <WithdrawForm session={session} />}</WithTradeSession>
       </TradeDialog>
     </>
   );
