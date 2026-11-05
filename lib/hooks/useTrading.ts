@@ -6,7 +6,7 @@ import { formatUnits } from "viem";
 import { CNGN_ASSET, TRADING_MANAGER_ADDRESS, USDC_CASH_ASSET } from "@/lib/venue/config";
 import { readWalletUsdc } from "@/lib/venue/deposit";
 import type { VenueMarket, VenueSymbol } from "@/lib/venue/market";
-import { findTradingSubaccountId, LEDGER_DECIMALS, readLedgerBalances } from "@/lib/venue/subaccount";
+import { findTradingSubaccountId, LEDGER_DECIMALS, readBalanceHistory, readLedgerBalances } from "@/lib/venue/subaccount";
 
 const MARKET_POLL_MS = 5000;
 const BALANCE_POLL_MS = 15_000;
@@ -125,4 +125,20 @@ export function useTradingAccount(walletAddress: string | null) {
     balances: balances.data ?? null,
     refreshBalances: () => void balances.refetch(),
   };
+}
+
+/**
+ * The account's balances at evenly spaced points from `startMs` to now. Keyed by the range rather
+ * than its start, which moves with the clock, so switching back to a range reuses its read.
+ */
+export function useBalanceHistory(subaccountId: string | null, rangeKey: string, startMs: number, points: number) {
+  const { data, isPending } = useQuery({
+    queryKey: ["balance-history", subaccountId, rangeKey, points],
+    queryFn: () => readBalanceHistory(subaccountId as string, startMs, points),
+    enabled: subaccountId !== null,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  return { history: data ?? null, isLoading: subaccountId !== null && isPending };
 }

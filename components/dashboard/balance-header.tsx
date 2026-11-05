@@ -5,7 +5,7 @@ import { addMilliseconds, format, startOfYear, subDays, subMonths } from "date-f
 import { Info } from "lucide-react";
 import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
 import { accountHoldings, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
-import { useVenueMarket } from "@/lib/hooks/useTrading";
+import { useBalanceHistory, useVenueMarket } from "@/lib/hooks/useTrading";
 import { SPOT_SYMBOL } from "@/lib/venue/market";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +26,7 @@ function getRangeStart(range: Range, now: Date, accountCreatedAt: string | null)
   return new Date(Math.min(starts[range].getTime(), minimumStart.getTime()));
 }
 
-function getRangeLabels(range: Range, accountCreatedAt: string | null) {
-  const now = new Date();
-  const start = getRangeStart(range, now, accountCreatedAt);
+function getRangeLabels(start: Date, now: Date) {
   const step = (now.getTime() - start.getTime()) / (LABEL_COUNT - 1);
 
   return Array.from({ length: LABEL_COUNT }, (_, index) =>
@@ -53,9 +51,115 @@ function TotalBalance({ session }: { session: TradeSession | null }) {
   return <>{total}</>;
 }
 
+const CHART_POINTS = 48;
+const CHART_HEADROOM = 1.15;
+
+const formatUsd = (value: number) =>
+  value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function ChartNote({ children }: { children: string }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <p className="px-4 text-center text-[13px] text-black/60 dark:text-white/60">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * The trading account's value over the range, read from the ledger at each point. cNGN is valued
+ * at today's spot mid, so the line shows deposits, trades and fills rather than the rate moving.
+ * Drawn as steps: a balance holds until something changes it.
+ */
+function BalanceChart({ session, rangeKey, startMs }: { session: TradeSession | null; rangeKey: string; startMs: number }) {
+  const holdings = accountHoldings(session);
+  const subaccountId = holdings !== null && holdings !== "none" ? session?.subaccountId ?? null : null;
+  const { history, isLoading } = useBalanceHistory(subaccountId, rangeKey, startMs, CHART_POINTS);
+  const { market } = useVenueMarket(SPOT_SYMBOL);
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const bid = market?.bids[0]?.price;
+  const ask = market?.asks[0]?.price;
+  const mid = bid && ask ? (bid + ask) / 2 : 0;
+  const values = history?.map((point) => point.usdc + point.cngn * mid) ?? [];
+  const max = Math.max(0, ...values);
+
+  if (holdings === "none") return <ChartNote>Your balance history will appear here once you add funds.</ChartNote>;
+  if (session !== null && session.isReady && !session.isAuthenticated) {
+    return <ChartNote>Open Add funds and verify your email to see your balance history.</ChartNote>;
+  }
+  if (holdings === null || isLoading) return <ChartNote>Loading your balance history</ChartNote>;
+  if (!history || values.length < 2) return <ChartNote>Your balance history couldn&apos;t be loaded.</ChartNote>;
+  if (max === 0) return <ChartNote>No balance in this period.</ChartNote>;
+
+  const top = max * CHART_HEADROOM;
+  const x = (index: number) => (index / (values.length - 1)) * 1000;
+  const y = (value: number) => 199 - (value / top) * 199;
+  let line = `M ${x(0)} ${y(values[0])}`;
+  for (let index = 1; index < values.length; index += 1) {
+    line += ` H ${x(index)} V ${y(values[index])}`;
+  }
+  const area = `${line} V 199 H 0 Z`;
+  const hoveredValue = hovered === null ? null : values[hovered];
+  const hoveredLeft = hovered === null ? 0 : (hovered / (values.length - 1)) * 100;
+
+  return (
+    <div
+      className="absolute inset-0"
+      onPointerMove={(event) => {
+        const box = event.currentTarget.getBoundingClientRect();
+        const fraction = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+        setHovered(Math.round(fraction * (values.length - 1)));
+      }}
+      onPointerLeave={() => setHovered(null)}
+    >
+      <svg viewBox="0 0 1000 199" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
+        <path d={area} className="fill-[#141414]/[0.05] dark:fill-white/[0.06]" />
+        <path d={line} fill="none" strokeWidth={2} vectorEffect="non-scaling-stroke" className="stroke-[#141414] dark:stroke-white" />
+      </svg>
+
+      {hovered !== null && hoveredValue !== null ? (
+        <>
+          <div className="pointer-events-none absolute inset-y-0 border-l border-black/20 dark:border-white/25" style={{ left: `${hoveredLeft}%` }} />
+          <div
+            className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#141414] ring-2 ring-[#FDFBF7] dark:bg-white dark:ring-[#1A1A1A]"
+            style={{ left: `${hoveredLeft}%`, top: `${(y(hoveredValue) / 199) * 100}%` }}
+          />
+          <div
+            className={cn(
+              "pointer-events-none absolute top-2 whitespace-nowrap rounded-lg bg-white px-3 py-2 text-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:bg-[#242424]",
+              hoveredLeft > 60 ? "-translate-x-[calc(100%+10px)]" : "translate-x-[10px]"
+            )}
+            style={{ left: `${hoveredLeft}%` }}
+          >
+            <p className="text-black/60 dark:text-white/60">{format(history[hovered].time, "MMM d, h:mm a")}</p>
+            <p className="mt-0.5 font-mono text-[14px] font-semibold text-[#141414] dark:text-white">{formatUsd(hoveredValue)}</p>
+          </div>
+        </>
+      ) : null}
+
+      <table className="sr-only">
+        <caption>Account value over the selected range</caption>
+        <tbody>
+          {history.map((point, index) => (
+            <tr key={point.time}>
+              <th scope="row">{format(point.time, "MMM d, h:mm a")}</th>
+              <td>{formatUsd(values[index])}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: string | null }) {
   const [range, setRange] = useState<Range>("1W");
-  const labels = useMemo(() => getRangeLabels(range, accountCreatedAt), [range, accountCreatedAt]);
+  // Fixed when the range changes, so the chart's query and the axis labels share one window.
+  const { start, now } = useMemo(() => {
+    const current = new Date();
+    return { start: getRangeStart(range, current, accountCreatedAt), now: current };
+  }, [range, accountCreatedAt]);
+  const labels = useMemo(() => getRangeLabels(start, now), [start, now]);
 
   return (
     <section className={PANEL_TRAY}>
@@ -96,13 +200,12 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
           </div>
         </div>
 
-        {/* Balance history isn't tracked yet, so the chart holds only its grid and this note. */}
-        <div className="relative mt-7 flex h-[199px] items-center justify-center border-y border-b-[#E5DDD3] border-t-[#F2ECE4] dark:border-b-white/15 dark:border-t-white/5">
+        <div className="relative mt-7 h-[199px] border-y border-b-[#E5DDD3] border-t-[#F2ECE4] dark:border-b-white/15 dark:border-t-white/5">
           <div className="absolute inset-x-0 top-1/3 border-t border-[#F2ECE4] dark:border-white/5" />
           <div className="absolute inset-x-0 top-2/3 border-t border-[#F2ECE4] dark:border-white/5" />
-          <p className="relative px-4 text-center text-[13px] text-black/60 dark:text-white/60">
-            Your balance history will appear here once you add funds.
-          </p>
+          <WithTradeSession>
+            {(session) => <BalanceChart session={session} rangeKey={range} startMs={start.getTime()} />}
+          </WithTradeSession>
         </div>
 
         <div className="mt-3 flex justify-between font-mono text-[12px] text-black/55 dark:text-white/60">
