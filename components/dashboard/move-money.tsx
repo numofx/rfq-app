@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
+import { canTrade, TradeAction, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
+import { useVenueMarket } from "@/lib/hooks/useTrading";
+import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
+import { placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
 const UNTIL_DATES = [
@@ -22,7 +27,12 @@ const UNTIL_DATES = [
 // The only date with a listed book: cNGN-30NOV26.
 const QUOTED_UNTIL = UNTIL_DATES[0];
 // No flow behind these yet.
-const SOON_ACTIONS = ["Exchange", "Direct", "Request", "Deposit", "Withdraw", "Transfer"];
+const SOON_ACTIONS = ["Direct", "Request", "Deposit", "Withdraw", "Transfer"];
+
+type Currency = "USDC" | "cNGN";
+type Account = (typeof ACCOUNTS)[number];
+type Status = { tone: "neutral" | "error"; text: string } | null;
+type DialogKind = "lock-rate" | "exchange";
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -33,6 +43,7 @@ const FIELD_PILL =
   "mt-2 flex h-12 w-full items-center gap-2.5 rounded-full bg-[#EFE7DC] px-4 outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
 const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
 const AVAILABLE = "font-mono text-black/60 dark:text-white/60";
+const ERROR_TEXT = "text-[#B4412F] dark:text-[#E98A7A]";
 
 const formatNumber = (value: number) =>
   value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,6 +51,35 @@ const formatNumber = (value: number) =>
 const formatSigned = (value: number) => `${value < 0 ? "−" : "+"}${formatNumber(Math.abs(value))}`;
 
 const formatPercent = (fraction: number) => `${(fraction * 100).toFixed(2)}%`;
+
+const formatMoney = (currency: Currency, value: number) => `${currency === "USDC" ? "$" : "₦"}${formatNumber(value)}`;
+
+function otherCurrency(currency: Currency): Currency {
+  return currency === "USDC" ? "cNGN" : "USDC";
+}
+
+function balanceOf(session: TradeSession | null, currency: Currency) {
+  const balances = session?.balances;
+  if (!balances) return null;
+  return currency === "USDC" ? balances.usdc : balances.cngn;
+}
+
+/** What the venue reported for a placed order, in words. */
+function describeOutcome(order: PlacedOrder, market: VenueMarket, filledText: (cngn: number) => string): Status {
+  const filledUnits = Number(order.outcome?.filled_amount ?? "0");
+  const status = order.outcome?.status;
+  if (status === "filled") return { tone: "neutral", text: filledText(order.units * market.unitCngn) };
+  if (filledUnits > 0) {
+    return {
+      tone: "neutral",
+      text: `${filledText(filledUnits * market.unitCngn)} The rest lapses in 2 minutes if it doesn't fill.`,
+    };
+  }
+  if (status === "expired" || status === "cancelled") {
+    return { tone: "error", text: "Nothing filled: the price moved before the order matched. Try again." };
+  }
+  return { tone: "neutral", text: "Order placed. It lapses in 2 minutes if the book doesn't fill it." };
+}
 
 function RateCardRow({ label, hint, value }: { label: string; hint?: string; value: string }) {
   return (
@@ -130,39 +170,21 @@ function RateCard({ quote, currency, message }: { quote: ForwardQuote | null; cu
   );
 }
 
-/** Mounted only while the dialog is open, so closing it clears the form. */
-function LockRateForm() {
-  const [amount, setAmount] = useState("");
-  const [accountCode, setAccountCode] = useState(ACCOUNTS[0].currency);
-  const [until, setUntil] = useState(UNTIL_DATES[0]);
-  const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
-  const { book, isPending: isRatePending } = useForwardBook();
-
-  const value = Number(amount);
-  const quote =
-    book && until === QUOTED_UNTIL ? quoteForward(book, value, account.currency as "USDC" | "cNGN", Date.now()) : null;
-  const canQuoteWithoutAmount = book ? quoteForward(book, 0, account.currency as "USDC" | "cNGN", Date.now()) !== null : false;
-
-  let rateMessage = "Unavailable";
-  if (until !== QUOTED_UNTIL) {
-    rateMessage = "No market for this date";
-  } else if (isRatePending) {
-    rateMessage = "Loading";
-  } else if (canQuoteWithoutAmount) {
-    rateMessage = "Not enough liquidity for this amount";
-  }
-
-  const exceedsBalance = value > Number(account.balance);
-  // Nothing locks a rate yet and every balance is a placeholder 0.00, so this stays false.
-  const canLockRate = value > 0 && !exceedsBalance && quote !== null;
-
+function AmountField({
+  account,
+  amount,
+  onAmountChange,
+  caption,
+  isError,
+}: {
+  account: Account;
+  amount: string;
+  onAmountChange: (amount: string) => void;
+  caption: string;
+  isError: boolean;
+}) {
   return (
-    <form
-      className="mt-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
+    <>
       <div className="flex items-baseline justify-center font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]">
         <span className="text-black/40 dark:text-white/50">{account.symbol}</span>
         <input
@@ -174,73 +196,161 @@ function LockRateForm() {
           onChange={(event) => {
             const next = event.target.value;
             if (/^\d*\.?\d{0,2}$/.test(next)) {
-              setAmount(next);
+              onAmountChange(next);
             }
           }}
           style={{ width: `${Math.max(amount.length, 1)}ch` }}
           className="max-w-[80%] bg-transparent text-[#141414] outline-none placeholder:text-black/25 dark:text-white dark:placeholder:text-white/30"
         />
       </div>
-      <p
-        aria-live="polite"
-        className={cn(
-          "mt-2 h-5 text-center text-[13px]",
-          exceedsBalance ? "text-[#B4412F] dark:text-[#E98A7A]" : "text-black/60 dark:text-white/60"
-        )}
-      >
-        {exceedsBalance ? "Exceeds your available balance" : `Amount in ${account.currency}`}
+      <p aria-live="polite" className={cn("mt-2 h-5 text-center text-[13px]", isError ? ERROR_TEXT : "text-black/60 dark:text-white/60")}>
+        {caption}
       </p>
+    </>
+  );
+}
+
+function AccountPicker({
+  id,
+  label,
+  account,
+  session,
+  onSelect,
+}: {
+  id: string;
+  label: string;
+  account: Account;
+  session: TradeSession | null;
+  onSelect: (currency: Currency) => void;
+}) {
+  const formatAvailable = (currency: Currency, symbol: string) => {
+    const balance = balanceOf(session, currency);
+    return balance === null ? `${symbol}—` : `${symbol}${formatNumber(balance)}`;
+  };
+
+  return (
+    <div className="min-w-0">
+      <span id={id} className={FIELD_LABEL}>
+        {label}
+      </span>
+      <DropdownMenu.Root modal={false}>
+        <DropdownMenu.Trigger asChild>
+          <button type="button" aria-labelledby={`${id} ${id}-value`} className={cn(FIELD_PILL, "pl-[9px] pr-3.5")}>
+            <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
+            <span id={`${id}-value`} className="min-w-0 text-left text-[14px] font-medium leading-tight text-[#141414] dark:text-white">
+              <span className="block">{account.currency}</span>
+              <span className={cn(AVAILABLE, "block truncate text-[12px] font-normal")}>
+                {formatAvailable(account.currency as Currency, account.symbol)} avail.
+              </span>
+            </span>
+            <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content align="start" sideOffset={6} className={cn(MENU_CONTENT, "min-w-[var(--radix-dropdown-menu-trigger-width)]")}>
+            {ACCOUNTS.map(({ iconSrc, currency, symbol }) => (
+              <DropdownMenu.Item
+                key={currency}
+                onSelect={() => onSelect(currency as Currency)}
+                className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+              >
+                <span className="flex items-center gap-2.5 font-medium">
+                  <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
+                  {currency}
+                </span>
+                <span className={cn(AVAILABLE, "text-[13px]")}>{formatAvailable(currency as Currency, symbol)} available</span>
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
+  );
+}
+
+/** Signs and places `plan`, then reports what filled. Shared by both dialogs. */
+function useOrderSubmission(session: TradeSession | null) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<Status>(null);
+
+  async function submit(market: VenueMarket, plan: OrderPlan, filledText: (cngn: number) => string) {
+    if (!canTrade(session)) return;
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      const order = await placeOrder({ market, plan, subaccountId: session.subaccountId, wallet: session.wallet });
+      setStatus(describeOutcome(order, market, filledText));
+      session.refreshBalances();
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "The order could not be placed." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return { isSubmitting, status, setStatus, submit };
+}
+
+/** Locks a forward rate: a market order on the cNGN-30NOV26 future. Mounted only while open. */
+function LockRateForm({ session }: { session: TradeSession | null }) {
+  const [amount, setAmount] = useState("");
+  const [accountCode, setAccountCode] = useState<Currency>("USDC");
+  const [until, setUntil] = useState(UNTIL_DATES[0]);
+  const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
+  const { book, isPending: isRatePending } = useForwardBook();
+  const { market } = useVenueMarket(FUTURE_SYMBOL);
+  const { isSubmitting, status, setStatus, submit } = useOrderSubmission(session);
+
+  const value = Number(amount);
+  const isQuotedDate = until === QUOTED_UNTIL;
+  const quote = book && isQuotedDate ? quoteForward(book, value, accountCode, Date.now()) : null;
+  const canQuoteWithoutAmount = book ? quoteForward(book, 0, accountCode, Date.now()) !== null : false;
+
+  let rateMessage = "Unavailable";
+  if (!isQuotedDate) {
+    rateMessage = "No market for this date";
+  } else if (isRatePending) {
+    rateMessage = "Loading";
+  } else if (canQuoteWithoutAmount) {
+    rateMessage = "Not enough liquidity for this amount";
+  }
+
+  const plan = market && isQuotedDate && value > 0 ? planOrder(market, accountCode, value) : null;
+  const surplus = session?.balances?.imSurplusUsd ?? null;
+  const marginNeeded = plan && typeof plan !== "string" ? (plan.marginUsdc ?? 0) + plan.feeUsdc : null;
+  const isShortOfMargin = marginNeeded !== null && surplus !== null && marginNeeded > surplus;
+
+  let disabledReason: string | null = null;
+  if (!(value > 0) || !isQuotedDate) disabledReason = "";
+  else if (plan === null) disabledReason = "Loading the market";
+  else if (typeof plan === "string") disabledReason = plan;
+  else if (isShortOfMargin) {
+    disabledReason = `Needs ${formatMoney("USDC", marginNeeded)} of margin. You have ${formatMoney("USDC", Math.max(surplus, 0))}.`;
+  }
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (disabledReason !== null || !market || !plan || typeof plan === "string") return;
+    const rate = 1 / plan.expectedPrice;
+    void submit(market, plan, (cngn) => `Locked ₦${formatNumber(cngn)} at about ${formatNumber(rate)} cNGN per USDC.`);
+  }
+
+  return (
+    <form className="mt-5" onSubmit={onSubmit}>
+      <AmountField
+        account={account}
+        amount={amount}
+        onAmountChange={(next) => {
+          setAmount(next);
+          setStatus(null);
+        }}
+        caption={isShortOfMargin ? "Not enough margin for this amount" : `Amount in ${account.currency}`}
+        isError={isShortOfMargin}
+      />
 
       {/* Too narrow side by side on a phone. */}
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
-        <div className="min-w-0">
-          <span id="lock-rate-account" className={FIELD_LABEL}>
-            Account
-          </span>
-          <DropdownMenu.Root modal={false}>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                aria-labelledby="lock-rate-account lock-rate-account-value"
-                className={cn(FIELD_PILL, "pl-[9px] pr-3.5")}
-              >
-                <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
-                <span id="lock-rate-account-value" className="min-w-0 text-left text-[14px] font-medium leading-tight text-[#141414] dark:text-white">
-                  <span className="block">{account.currency}</span>
-                  <span className={cn(AVAILABLE, "block truncate text-[12px] font-normal")}>
-                    {account.symbol}
-                    {account.balance} avail.
-                  </span>
-                </span>
-                <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                align="start"
-                sideOffset={6}
-                className={cn(MENU_CONTENT, "min-w-[var(--radix-dropdown-menu-trigger-width)]")}
-              >
-                {ACCOUNTS.map(({ iconSrc, currency, symbol, balance }) => (
-                  <DropdownMenu.Item
-                    key={currency}
-                    onSelect={() => setAccountCode(currency)}
-                    className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-                  >
-                    <span className="flex items-center gap-2.5 font-medium">
-                      <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
-                      {currency}
-                    </span>
-                    <span className={cn(AVAILABLE, "text-[13px]")}>
-                      {symbol}
-                      {balance} available
-                    </span>
-                  </DropdownMenu.Item>
-                ))}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </div>
+        <AccountPicker id="lock-rate-account" label="Account" account={account} session={session} onSelect={setAccountCode} />
 
         <div className="min-w-0">
           <span id="lock-rate-until" className={FIELD_LABEL}>
@@ -248,11 +358,7 @@ function LockRateForm() {
           </span>
           <DropdownMenu.Root modal={false}>
             <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                aria-labelledby="lock-rate-until lock-rate-until-value"
-                className={FIELD_PILL}
-              >
+              <button type="button" aria-labelledby="lock-rate-until lock-rate-until-value" className={FIELD_PILL}>
                 <Calendar className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />
                 <span id="lock-rate-until-value" className="truncate text-[14px] font-medium text-[#141414] dark:text-white">
                   {until}
@@ -261,11 +367,7 @@ function LockRateForm() {
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                align="start"
-                sideOffset={6}
-                className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
-              >
+              <DropdownMenu.Content align="start" sideOffset={6} className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}>
                 {UNTIL_DATES.map((date) => (
                   <DropdownMenu.Item
                     key={date}
@@ -283,23 +385,142 @@ function LockRateForm() {
 
       <RateCard quote={quote} currency={account.currency} message={rateMessage} />
 
-      <button
-        type="submit"
-        disabled={!canLockRate}
-        className="mt-5 h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
-      >
-        Lock rate
-      </button>
+      <div className="mt-5">
+        <TradeAction session={session} label="Lock rate" disabledReason={disabledReason} isSubmitting={isSubmitting} status={status} />
+      </div>
     </form>
   );
 }
 
-/** The dashboard's "Move money" button: its menu of actions and the Lock rate dialog. */
+/** Converts between the accounts at the spot rate: a market order on cNGN-USDC. Mounted only while open. */
+function ExchangeForm({ session }: { session: TradeSession | null }) {
+  const [amount, setAmount] = useState("");
+  const [fromCode, setFromCode] = useState<Currency>("USDC");
+  const from = ACCOUNTS.find(({ currency }) => currency === fromCode) ?? ACCOUNTS[0];
+  const toCode = otherCurrency(fromCode);
+  const { market, isPending } = useVenueMarket(SPOT_SYMBOL);
+  const { isSubmitting, status, setStatus, submit } = useOrderSubmission(session);
+
+  const value = Number(amount);
+  const plan = market && value > 0 ? planOrder(market, fromCode, value) : null;
+  const available = balanceOf(session, fromCode);
+  const exceedsBalance = available !== null && value > available;
+  const receive =
+    plan && typeof plan !== "string" ? (toCode === "cNGN" ? plan.cngn : plan.notionalUsdc - plan.feeUsdc) : null;
+  // The spot book is quoted in USDC per cNGN; command shows rates as cNGN per USDC.
+  const bestPrice = market ? (fromCode === "USDC" ? market.asks[0]?.price : market.bids[0]?.price) : undefined;
+  const rate = plan && typeof plan !== "string" ? 1 / plan.expectedPrice : bestPrice ? 1 / bestPrice : null;
+
+  let disabledReason: string | null = null;
+  if (!(value > 0)) disabledReason = "";
+  else if (exceedsBalance) disabledReason = "";
+  else if (plan === null) disabledReason = isPending ? "Loading the market" : "The market is unavailable";
+  else if (typeof plan === "string") disabledReason = plan;
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (disabledReason !== null || !market || !plan || typeof plan === "string") return;
+    const verb = plan.side === "buy" ? "Bought" : "Sold";
+    void submit(market, plan, (cngn) => `${verb} ₦${formatNumber(cngn)}.`);
+  }
+
+  return (
+    <form className="mt-5" onSubmit={onSubmit}>
+      <AmountField
+        account={from}
+        amount={amount}
+        onAmountChange={(next) => {
+          setAmount(next);
+          setStatus(null);
+        }}
+        caption={exceedsBalance ? "Exceeds your available balance" : `Amount in ${from.currency}`}
+        isError={exceedsBalance}
+      />
+
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+        <AccountPicker id="exchange-from" label="From" account={from} session={session} onSelect={setFromCode} />
+        <AccountPicker id="exchange-to" label="To" account={ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1]} session={session} onSelect={(currency) => setFromCode(otherCurrency(currency))} />
+      </div>
+
+      <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
+        <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
+          <p className="min-w-0 font-medium text-[#141414] dark:text-white">
+            Rate <span className="text-[13px] font-normal text-black/60 dark:text-white/60">{rate === null ? (isPending ? "Loading" : "Unavailable") : "cNGN per USDC"}</span>
+          </p>
+          <p className={cn("shrink-0 font-mono text-[20px] font-semibold leading-none", rate === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
+            {rate === null ? "—" : formatNumber(rate)}
+          </p>
+        </div>
+        {plan && typeof plan !== "string" && receive !== null ? (
+          <dl className="mx-[18px] space-y-2 border-t border-black/[0.07] pb-3 pt-3 dark:border-white/10">
+            <RateCardRow label="You get" value={`≈ ${formatMoney(toCode, receive)}`} />
+            <RateCardRow label="Fee" hint={formatPercent(market ? market.takerFeeBps / 10_000 : 0)} value={formatMoney("USDC", plan.feeUsdc)} />
+          </dl>
+        ) : null}
+      </div>
+
+      <div className="mt-5">
+        <TradeAction session={session} label="Exchange" disabledReason={disabledReason} isSubmitting={isSubmitting} status={status} />
+      </div>
+    </form>
+  );
+}
+
+function TradeDialog({ title, open, onOpenChange, children }: { title: string; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-md" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
+        >
+          <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-8">
+            <Dialog.Title className="text-center text-[17px] font-semibold tracking-[-0.01em] text-[#141414] dark:text-white">
+              {title}
+            </Dialog.Title>
+            <Dialog.Close
+              aria-label="Close"
+              className="absolute right-[34px] top-6 flex h-7 w-7 items-center justify-center rounded-full text-[#141414]/80 outline-none transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-black/20 dark:text-white/70 dark:hover:bg-white/10"
+            >
+              <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            </Dialog.Close>
+            {children}
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/** Opens a dialog named by `?action=` (the sidebar's Exchange link), then drops it from the URL. */
+function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const action = searchParams.get("action");
+
+  useEffect(() => {
+    if (action === "exchange" || action === "lock-rate") {
+      onOpen(action);
+      router.replace(pathname);
+    }
+  }, [action, onOpen, pathname, router]);
+
+  return null;
+}
+
+/** The dashboard's "Move money" button: its menu of actions, and the Lock rate and Exchange dialogs. */
 export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [isLockRateOpen, setIsLockRateOpen] = useState(false);
+  const [dialog, setDialog] = useState<DialogKind | null>(null);
+  const closeUnless = (kind: DialogKind) => (isOpen: boolean) => setDialog(isOpen ? kind : null);
 
   return (
     <>
+      <Suspense fallback={null}>
+        <ActionFromUrl onOpen={setDialog} />
+      </Suspense>
+
       {/* Not modal: a modal menu handing focus to a dialog leaves the page unclickable after it closes. */}
       <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
         <DropdownMenu.Trigger asChild>
@@ -313,12 +534,20 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={8} className={cn(MENU_CONTENT, "w-[240px]")}>
-            <DropdownMenu.Item
-              onSelect={() => setIsLockRateOpen(true)}
-              className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-            >
-              Lock rate
-            </DropdownMenu.Item>
+            {(
+              [
+                ["lock-rate", "Lock rate"],
+                ["exchange", "Exchange"],
+              ] as const
+            ).map(([kind, label]) => (
+              <DropdownMenu.Item
+                key={kind}
+                onSelect={() => setDialog(kind)}
+                className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+              >
+                {label}
+              </DropdownMenu.Item>
+            ))}
             {SOON_ACTIONS.map((action) => (
               <DropdownMenu.Item key={action} disabled className={cn(MENU_ITEM, "text-black/45 dark:text-white/40")}>
                 {action}
@@ -331,28 +560,12 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <Dialog.Root open={isLockRateOpen} onOpenChange={setIsLockRateOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-md" />
-          <Dialog.Content
-            aria-describedby={undefined}
-            className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
-          >
-            <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-8">
-              <Dialog.Title className="text-center text-[17px] font-semibold tracking-[-0.01em] text-[#141414] dark:text-white">
-                Lock rate
-              </Dialog.Title>
-              <Dialog.Close
-                aria-label="Close"
-                className="absolute right-[34px] top-6 flex h-7 w-7 items-center justify-center rounded-full text-[#141414]/80 outline-none transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-black/20 dark:text-white/70 dark:hover:bg-white/10"
-              >
-                <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-              </Dialog.Close>
-              <LockRateForm />
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <TradeDialog title="Lock rate" open={dialog === "lock-rate"} onOpenChange={closeUnless("lock-rate")}>
+        <WithTradeSession>{(session) => <LockRateForm session={session} />}</WithTradeSession>
+      </TradeDialog>
+      <TradeDialog title="Exchange" open={dialog === "exchange"} onOpenChange={closeUnless("exchange")}>
+        <WithTradeSession>{(session) => <ExchangeForm session={session} />}</WithTradeSession>
+      </TradeDialog>
     </>
   );
 }

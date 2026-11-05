@@ -1,25 +1,12 @@
 import { http } from "wagmi";
-import { celo, celoAlfajores } from "wagmi/chains";
+import { base } from "viem/chains";
 import { createConfig } from "@privy-io/wagmi";
 
-// Privy + wagmi configuration
-// IMPORTANT: createConfig must be imported from @privy-io/wagmi, not from wagmi
-// This ensures proper integration with Privy's embedded wallets
-
-// Coerce chain objects to the expected `Chain` type using a narrow, explicit cast.
-// This is stricter than `any` and documents the intent: the chain objects
-// come from `wagmi/chains` but our pinned types may be slightly divergent.
-// Coerce the array to the exact `chains` type expected by `createConfig` using
-// the function's parameter types. This avoids importing an unavailable
-// named `Chain` type and is stricter than `any` while still safe.
-const chains = [celo, celoAlfajores] as unknown as Parameters<
-  typeof createConfig
->[0]["chains"];
-
+// createConfig comes from @privy-io/wagmi, not wagmi, so wagmi sees Privy's embedded wallet.
+// Base only: it is the chain the venue settles on, and the one Privy is pinned to.
 export const config = createConfig({
-  chains,
+  chains: [base],
   transports: {
-    [celo.id]: http("https://forno.celo.org"),
-    [celoAlfajores.id]: http("https://alfajores-forno.celo-testnet.org"),
+    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL?.trim() || undefined),
   },
 });
