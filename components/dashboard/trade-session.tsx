@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ConnectedWallet } from "@privy-io/react-auth";
 import { useTradingConfigured } from "@/components/privy-provider";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
-import { useTradingAccount, useTradingWallet, type TradingBalances } from "@/lib/hooks/useTrading";
+import { useTradingAccount, useTradingWallet, type TradingBalances, type WalletStatus } from "@/lib/hooks/useTrading";
 import { TERMINAL_URL } from "@/lib/venue/config";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,11 @@ export type TradeSession = {
   isReady: boolean;
   isAuthenticated: boolean;
   wallet: ConnectedWallet | null;
+  walletStatus: WalletStatus;
+  /** The wallet the Privy account logged in with, which the trading app trades from. */
+  accountWalletAddress: string | null;
+  connectWallet: () => void;
+  createWallet: () => Promise<unknown>;
   subaccountId: string | null;
   isResolving: boolean;
   lookupFailed: boolean;
@@ -33,6 +38,10 @@ function SessionProvider({ children }: { children: (session: TradeSession) => Re
     isReady: trading.isReady,
     isAuthenticated: trading.isAuthenticated,
     wallet: trading.wallet,
+    walletStatus: trading.walletStatus,
+    accountWalletAddress: trading.accountWalletAddress,
+    connectWallet: trading.connectWallet,
+    createWallet: trading.createWallet,
     subaccountId: account.subaccountId,
     isResolving: account.isResolving,
     lookupFailed: account.lookupFailed,
@@ -59,6 +68,73 @@ export function canTrade(session: TradeSession | null): session is TradeSession 
 const PRIMARY_BUTTON =
   "h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40";
 const NOTE = "mt-3 text-center text-[13px] text-black/60 dark:text-white/60";
+
+/** How long a wallet may load before the dialog says it is stuck rather than loading. */
+const WALLET_STALL_MS = 10_000;
+
+const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
+
+/**
+ * What stands between a verified user and a usable wallet: it is loading, it is a browser wallet
+ * that has to be connected here, or the account has none yet. Rendered while `session.wallet` is null.
+ */
+export function WalletStep({ session, label }: { session: TradeSession; label: string }) {
+  const [isStalled, setIsStalled] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (session.walletStatus !== "loading") return;
+    const timer = setTimeout(() => setIsStalled(true), WALLET_STALL_MS);
+    return () => clearTimeout(timer);
+  }, [session.walletStatus]);
+
+  if (session.walletStatus === "connect") {
+    const address = session.accountWalletAddress;
+    return (
+      <>
+        <button type="button" className={PRIMARY_BUTTON} onClick={session.connectWallet}>
+          Connect wallet
+        </button>
+        <p className={NOTE}>
+          {address
+            ? `Your trading account belongs to ${shortAddress(address)}. Connect that wallet to continue.`
+            : "Connect the wallet you trade with on Numo to continue."}
+        </p>
+      </>
+    );
+  }
+
+  if (session.walletStatus === "create") {
+    return (
+      <>
+        <button
+          type="button"
+          className={PRIMARY_BUTTON}
+          onClick={() => {
+            setError("");
+            session.createWallet().catch(() => setError("We couldn't create your wallet. Try again."));
+          }}
+        >
+          Create wallet
+        </button>
+        <p className={cn(NOTE, error && "text-[#B4412F] dark:text-[#E98A7A]")}>
+          {error || "Your account has no wallet yet. Create one to hold your funds."}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button type="button" disabled className={PRIMARY_BUTTON}>{label}</button>
+      <p className={NOTE}>
+        {isStalled
+          ? "Your wallet didn't load. Refresh the page, and if it persists, contact support."
+          : "Loading your wallet"}
+      </p>
+    </>
+  );
+}
 
 /** Verifies the command login's email with Privy, which opens the same wallet as the trading app. */
 export function EmailVerification({ session }: { session: TradeSession }) {
@@ -162,7 +238,10 @@ export function TradeAction({
   if (!session.isAuthenticated) {
     return <EmailVerification session={session} />;
   }
-  if (session.wallet === null || session.isResolving) {
+  if (session.wallet === null) {
+    return <WalletStep session={session} label={label} />;
+  }
+  if (session.isResolving) {
     return (
       <>
         <button type="button" disabled className={PRIMARY_BUTTON}>{label}</button>

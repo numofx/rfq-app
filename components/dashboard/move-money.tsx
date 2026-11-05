@@ -8,7 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
-import { canTrade, EmailVerification, TradeAction, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
+import { canTrade, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
@@ -530,8 +530,10 @@ function DepositForm({ session }: { session: TradeSession | null }) {
     action = <button type="button" disabled className={PRIMARY_BUTTON}>Loading</button>;
   } else if (!session.isAuthenticated) {
     action = <EmailVerification session={session} />;
+  } else if (session.wallet === null) {
+    action = <WalletStep session={session} label="Deposit" />;
   } else {
-    const isWaiting = session.wallet === null || session.isResolving;
+    const isWaiting = session.isResolving;
     action = (
       <>
         <button

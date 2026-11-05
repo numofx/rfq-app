@@ -1,6 +1,6 @@
 "use client";
 
-import { useLoginWithEmail, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, useCreateWallet, useLoginWithEmail, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import { CNGN_ASSET, TRADING_MANAGER_ADDRESS, USDC_CASH_ASSET } from "@/lib/venue/config";
@@ -11,19 +11,43 @@ import { findTradingSubaccountId, LEDGER_DECIMALS, readLedgerBalances } from "@/
 const MARKET_POLL_MS = 5000;
 const BALANCE_POLL_MS = 15_000;
 
+/**
+ * Where the trading wallet stands: connected, still loading, linked to the account but not connected
+ * in this browser (a browser wallet such as MetaMask), or missing.
+ */
+export type WalletStatus = "loading" | "ready" | "connect" | "create";
+
 /** Only call from inside a component rendered when useTradingConfigured() is true. */
 export function useTradingWallet() {
   const { authenticated, ready, user } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { loginWithCode, sendCode, state } = useLoginWithEmail();
-  // The embedded wallet, the one trading-app creates for the same login.
-  const wallet = wallets.find((candidate) => candidate.walletClientType === "privy") ?? null;
+  const { connectWallet } = useConnectWallet();
+  const { createWallet } = useCreateWallet();
+
+  // The wallet the account logged in with first, as trading-app's resolvePrimaryWallet does, so
+  // both apps trade from the same wallet and so the same subaccount.
+  const accountWallet = user?.wallet ?? null;
+  const accountAddress = accountWallet?.address?.toLowerCase() ?? null;
+  const wallet =
+    (accountAddress ? wallets.find((candidate) => candidate.address.toLowerCase() === accountAddress) : undefined) ??
+    wallets.find((candidate) => candidate.walletClientType === "privy") ??
+    null;
+
+  let walletStatus: WalletStatus = "loading";
+  if (wallet) walletStatus = "ready";
+  else if (ready && walletsReady && accountWallet === null) walletStatus = "create";
+  else if (ready && walletsReady && accountWallet?.walletClientType !== "privy") walletStatus = "connect";
 
   return {
     isReady: ready && (!authenticated || walletsReady),
     isAuthenticated: authenticated,
     privyEmail: user?.email?.address ?? null,
     wallet,
+    walletStatus,
+    accountWalletAddress: accountWallet?.address ?? null,
+    connectWallet: () => connectWallet(accountWallet ? { suggestedAddress: accountWallet.address } : undefined),
+    createWallet: () => createWallet(),
     loginWithCode,
     sendCode,
     otpState: state,
