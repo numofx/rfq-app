@@ -14,10 +14,24 @@ export function useTradingConfigured() {
   return useContext(TradingConfiguredContext);
 }
 
+const LockWalletContext = createContext<() => Promise<void>>(async () => {});
+
 /**
- * Keeps the trading wallet's session tied to the command login. Privy keeps its own session in
- * localStorage, which outlives a Supabase sign-out, so a second person on the same browser would
- * otherwise trade from the first person's wallet.
+ * Logs out of command and locks the trading wallet. Command's own session also ends whenever the
+ * page is left, which keeps the wallet open so the next login needs no code; this is the
+ * deliberate Log out, which closes both.
+ */
+export function useSignOut() {
+  const lockWallet = useContext(LockWalletContext);
+  return async () => {
+    await lockWallet().catch(() => {});
+    await supabase?.auth.signOut();
+  };
+}
+
+/**
+ * Closes the trading wallet when a different email logs in to command, so a second person on the
+ * same browser never trades from the first person's wallet.
  */
 function TradingSessionGuard() {
   const { authenticated, logout, ready, user } = usePrivy();
@@ -27,24 +41,25 @@ function TradingSessionGuard() {
     const client = supabase;
     if (!ready || !authenticated || !client) return;
 
-    let isMounted = true;
-    void client.auth.getUser().then(({ data }) => {
-      const commandEmail = data.user?.email?.toLowerCase() ?? null;
-      if (isMounted && commandEmail !== privyEmail) {
-        void logout();
-      }
-    });
+    function check(commandEmail: string | null | undefined) {
+      if (commandEmail && commandEmail.toLowerCase() !== privyEmail) void logout();
+    }
 
-    const { data: listener } = client.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") void logout();
-    });
-    return () => {
-      isMounted = false;
-      listener.subscription.unsubscribe();
-    };
+    void client.auth.getUser().then(({ data }) => check(data.user?.email));
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => check(session?.user?.email));
+    return () => listener.subscription.unsubscribe();
   }, [authenticated, logout, privyEmail, ready]);
 
   return null;
+}
+
+function LockWalletProvider({ children }: { children: React.ReactNode }) {
+  const { authenticated, logout } = usePrivy();
+  return (
+    <LockWalletContext.Provider value={async () => (authenticated ? logout() : undefined)}>
+      {children}
+    </LockWalletContext.Provider>
+  );
 }
 
 /**
@@ -77,7 +92,9 @@ export function PrivyWagmiProvider({ children }: { children: React.ReactNode }) 
     >
       <TradingConfiguredContext.Provider value>
         <TradingSessionGuard />
-        <WagmiProvider config={config}>{children}</WagmiProvider>
+        <LockWalletProvider>
+          <WagmiProvider config={config}>{children}</WagmiProvider>
+        </LockWalletProvider>
       </TradingConfiguredContext.Provider>
     </PrivyProvider>
   );

@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import { Bell, Camera, Check, ChevronRight, CircleHelp, Copy, FileText, LogOut, Shield } from "lucide-react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
+import { useSignOut } from "@/components/privy-provider";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,7 @@ function ProfileRows({ title, rows }: { title: string; rows: ProfileRow[] }) {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const signOut = useSignOut();
   const user = useAccountUser();
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
@@ -125,7 +127,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    await supabase?.auth.signOut();
+    await signOut();
     router.push("/");
   };
 

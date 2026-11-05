@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ArrowLeft, Lock, LogOut, User } from "lucide-react";
 import { Logo } from "@/components/layout/sidebar-layout";
+import { useSignOut } from "@/components/privy-provider";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ function AccountCard({ title, description, children }: { title: string; descript
 
 export default function AccountPage() {
   const router = useRouter();
+  const signOut = useSignOut();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -86,7 +88,7 @@ export default function AccountPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    await supabase?.auth.signOut();
+    await signOut();
     router.push("/");
   };
 

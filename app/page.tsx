@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AuthCard,
@@ -17,9 +17,11 @@ import {
 } from "@/components/auth/auth-ui";
 import { AppLayout, CardWrapper, ContentLayout, containerClass } from "@/components/layout/page-shell";
 import { getReadableAuthError } from "@/lib/auth-errors";
+import { TradingUnlock } from "@/components/auth/trading-unlock";
+import { useSignOut } from "@/components/privy-provider";
 import { supabase } from "@/lib/supabase/client";
 
-type View = "login" | "signup" | "password" | "verify" | "team";
+type View = "login" | "signup" | "password" | "verify" | "team" | "unlock";
 type LoginErrorField = "email" | "password" | null;
 
 const getAuthRedirectUrl = () => {
@@ -101,6 +103,7 @@ const getDevAuthDiagnostic = (error: unknown) => {
 
 export default function HomePage() {
   const router = useRouter();
+  const signOut = useSignOut();
   const searchParams = useSearchParams();
   const currentYear = new Date().getFullYear();
   // numofx.com links here with ?view=signup.
@@ -188,11 +191,11 @@ export default function HomePage() {
 
   const handleLogout = async () => {
     setIsAccountMenuOpen(false);
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    await signOut();
     setView("login");
   };
+
+  const goToDashboard = useCallback(() => router.push("/dashboard"), [router]);
 
   const handleSignupSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -356,7 +359,9 @@ export default function HomePage() {
         return;
       }
 
-      router.push("/dashboard");
+      // The trading wallet's code comes next, unless this browser already has it open.
+      setAccountEmail(loginEmail.trim());
+      setView("unlock");
     } catch (error) {
       setLoginErrorField("password");
       setLoginErrorMessage("Invalid password");
@@ -481,7 +486,7 @@ export default function HomePage() {
   const accountDisplayName = accountName || [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || "User";
   const accountDisplayEmail = accountEmail || signupEmail.trim() || loginEmail.trim() || "No email available";
   const isPremiumAuthView =
-    view === "login" || view === "signup" || view === "password" || view === "verify";
+    view === "login" || view === "signup" || view === "password" || view === "verify" || view === "unlock";
   const headerRight =
     view === "team" ? (
       <div className="relative">
@@ -737,7 +742,7 @@ export default function HomePage() {
 
                   <button
                     type="button"
-                    onClick={() => router.push("/dashboard")}
+                    onClick={() => setView("unlock")}
                     className="h-12 w-full rounded-lg border border-black/10 bg-white text-[14px] font-semibold text-black shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-white/90 active:translate-y-px"
                   >
                     Finish Setup &rarr;
@@ -785,7 +790,9 @@ export default function HomePage() {
             }
           >
             <CardWrapper size="auth" className={isPremiumAuthView ? authWidthClass : "max-w-sm"}>
-            {view === "login" ? (
+            {view === "unlock" ? (
+              <TradingUnlock email={accountEmail || loginEmail.trim() || signupEmail.trim()} onDone={goToDashboard} />
+            ) : view === "login" ? (
               <AuthCard
                 below={
                   <>

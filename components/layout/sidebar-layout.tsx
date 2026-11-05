@@ -19,6 +19,7 @@ import {
   User,
 } from "lucide-react";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
+import { useSignOut } from "@/components/privy-provider";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -67,11 +68,12 @@ const menuItemClass =
 
 function AccountMenu({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
+  const signOut = useSignOut();
   const { resolvedTheme, setTheme } = useTheme();
   const user = useAccountUser();
 
   const handleLogout = async () => {
-    await supabase?.auth.signOut();
+    await signOut();
     router.push("/");
   };
 
