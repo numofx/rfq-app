@@ -481,6 +481,8 @@ function DepositForm({ session }: { session: TradeSession | null }) {
   const [amount, setAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  // Set once the venue confirms a deposit: the button says so, until the amount is changed.
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
   const address = session?.wallet?.address ?? null;
   const walletUsdc = useWalletUsdc(address);
@@ -498,11 +500,11 @@ function DepositForm({ session }: { session: TradeSession | null }) {
     if (!session?.wallet || session.isResolving || !(value >= MIN_DEPOSIT_USDC) || exceedsWallet) return;
     setIsSubmitting(true);
     setStatus(null);
+    setIsConfirmed(false);
     try {
       const record = await depositUsdc({ amountUsdc: amount, subaccountId: session.subaccountId, wallet: session.wallet });
       if (record.status === "confirmed") {
-        setStatus({ tone: "neutral", text: `Deposited ${formatMoney("USDC", value)} into your trading account.` });
-        setAmount("");
+        setIsConfirmed(true);
       } else if (record.status === "reverted" || record.status === "rejected") {
         setStatus({ tone: "error", text: record.error || "The deposit didn't go through. Nothing was moved." });
       } else {
@@ -538,13 +540,26 @@ function DepositForm({ session }: { session: TradeSession | null }) {
       <>
         <button
           type="submit"
-          disabled={isWaiting || isSubmitting || !(value >= MIN_DEPOSIT_USDC) || exceedsWallet}
-          className={PRIMARY_BUTTON}
+          disabled={isConfirmed || isWaiting || isSubmitting || !(value >= MIN_DEPOSIT_USDC) || exceedsWallet}
+          className={cn(
+            PRIMARY_BUTTON,
+            "flex items-center justify-center gap-2",
+            isConfirmed && "disabled:cursor-default disabled:bg-[#141414] disabled:text-white dark:disabled:bg-white dark:disabled:text-[#141414]"
+          )}
         >
-          {isSubmitting ? "Depositing" : "Deposit"}
+          {isConfirmed ? (
+            <>
+              <Check className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+              Confirmed
+            </>
+          ) : isSubmitting ? (
+            "Depositing"
+          ) : (
+            "Deposit"
+          )}
         </button>
         <p aria-live="polite" className={cn(NOTE, "min-h-5", status?.tone === "error" && ERROR_TEXT)}>
-          {status?.text ?? (isWaiting ? "Finding your trading account" : session.subaccountId === null ? "Your first deposit opens your trading account." : "")}
+          {status?.text ?? (isConfirmed ? "" : isWaiting ? "Finding your trading account" : session.subaccountId === null ? "Your first deposit opens your trading account." : "")}
         </p>
       </>
     );
@@ -558,6 +573,7 @@ function DepositForm({ session }: { session: TradeSession | null }) {
         onAmountChange={(next) => {
           setAmount(next);
           setStatus(null);
+          setIsConfirmed(false);
         }}
         caption={caption}
         isError={isBelowMinimum || exceedsWallet}
