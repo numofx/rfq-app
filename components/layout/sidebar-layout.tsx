@@ -166,7 +166,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <div className="space-y-0.5">
             <SidebarItem icon={Home} label="Home" href="/dashboard" isActive={pathname === "/dashboard"} />
             <SidebarItem icon={List} label="Transactions" href="#" />
-            <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/account"} />
+            <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/profile"} />
           </div>
 
           <p className="mb-2 mt-8 px-3.5 text-[12px] text-black/60 dark:text-white/50">Move money</p>

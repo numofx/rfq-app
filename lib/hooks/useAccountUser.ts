@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 export interface AccountUser {
   email: string;
   firstName: string;
+  lastName: string;
   teamName: string;
   createdAt: string | null;
 }
@@ -24,11 +25,13 @@ export function useAccountUser(): AccountUser | null {
         if (!isMounted || !data.user) return;
         const metadata = data.user.user_metadata as Record<string, unknown> | undefined;
         const firstName = typeof metadata?.first_name === "string" ? metadata.first_name.trim() : "";
+        const lastName = typeof metadata?.last_name === "string" ? metadata.last_name.trim() : "";
         const teamName = typeof metadata?.team_name === "string" ? metadata.team_name.trim() : "";
 
         setUser({
           email: data.user.email ?? "",
           firstName,
+          lastName,
           teamName: teamName || "Numo",
           createdAt: data.user.created_at ?? null,
         });
