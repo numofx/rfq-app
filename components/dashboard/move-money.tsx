@@ -566,12 +566,18 @@ function DepositForm({ session }: { session: TradeSession | null }) {
       <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
         <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
           <p className="min-w-0 font-medium text-[#141414] dark:text-white">
-            Wallet <span className="text-[13px] font-normal text-black/60 dark:text-white/60">USDC on Base</span>
+            Wallet <span className="text-[13px] font-normal text-black/60 dark:text-white/60">ready to deposit</span>
           </p>
           <p className="shrink-0 font-mono text-[20px] font-semibold leading-none text-[#141414] dark:text-white">
             {walletUsdc === null ? "—" : formatMoney("USDC", walletUsdc)}
           </p>
         </div>
+        {/* What has already moved across, so a deposit doesn't look like it vanished from the wallet. */}
+        {session?.balances ? (
+          <dl className="mx-[18px] border-t border-black/[0.07] py-3 dark:border-white/10">
+            <RateCardRow label="Already deposited" value={formatMoney("USDC", session.balances.usdc)} />
+          </dl>
+        ) : null}
         {address ? (
           <div className="mx-[18px] border-t border-black/[0.07] pb-3.5 pt-3 dark:border-white/10">
             <p className="text-black/70 dark:text-white/70">Send USDC on Base to this address to fund your wallet.</p>
