@@ -8,7 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
-import { canTrade, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
+import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
@@ -274,14 +274,21 @@ function AccountPicker({
 function useOrderSubmission(session: TradeSession | null) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  // Set when the order filled in full: the button says so, until the form is changed.
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
   async function submit(market: VenueMarket, plan: OrderPlan, filledText: (cngn: number) => string) {
     if (!canTrade(session)) return;
     setIsSubmitting(true);
     setStatus(null);
+    setIsConfirmed(false);
     try {
       const order = await placeOrder({ market, plan, subaccountId: session.subaccountId, wallet: session.wallet });
-      setStatus(describeOutcome(order, market, filledText));
+      if (order.outcome?.status === "filled") {
+        setIsConfirmed(true);
+      } else {
+        setStatus(describeOutcome(order, market, filledText));
+      }
       session.refreshBalances();
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "The order could not be placed." });
@@ -290,7 +297,13 @@ function useOrderSubmission(session: TradeSession | null) {
     }
   }
 
-  return { isSubmitting, status, setStatus, submit };
+  /** Clears the last outcome, once the user starts entering the next order. */
+  function reset() {
+    setStatus(null);
+    setIsConfirmed(false);
+  }
+
+  return { isConfirmed, isSubmitting, status, reset, submit };
 }
 
 /** Locks a forward rate: a market order on the cNGN-30NOV26 future. Mounted only while open. */
@@ -301,7 +314,7 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
   const { book, isPending: isRatePending } = useForwardBook();
   const { market } = useVenueMarket(FUTURE_SYMBOL);
-  const { isSubmitting, status, setStatus, submit } = useOrderSubmission(session);
+  const { isConfirmed, isSubmitting, status, reset, submit } = useOrderSubmission(session);
 
   const value = Number(amount);
   const isQuotedDate = until === QUOTED_UNTIL;
@@ -344,7 +357,7 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
         amount={amount}
         onAmountChange={(next) => {
           setAmount(next);
-          setStatus(null);
+          reset();
         }}
         caption={isShortOfMargin ? "Not enough margin for this amount" : `Amount in ${account.currency}`}
         isError={isShortOfMargin}
@@ -388,7 +401,7 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
       <RateCard quote={quote} currency={account.currency} message={rateMessage} />
 
       <div className="mt-5">
-        <TradeAction session={session} label="Lock rate" disabledReason={disabledReason} isSubmitting={isSubmitting} status={status} />
+        <TradeAction session={session} label="Lock rate" disabledReason={disabledReason} isSubmitting={isSubmitting} isConfirmed={isConfirmed} status={status} />
       </div>
     </form>
   );
@@ -401,7 +414,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
   const from = ACCOUNTS.find(({ currency }) => currency === fromCode) ?? ACCOUNTS[0];
   const toCode = otherCurrency(fromCode);
   const { market, isPending } = useVenueMarket(SPOT_SYMBOL);
-  const { isSubmitting, status, setStatus, submit } = useOrderSubmission(session);
+  const { isConfirmed, isSubmitting, status, reset, submit } = useOrderSubmission(session);
 
   const value = Number(amount);
   const plan = market && value > 0 ? planOrder(market, fromCode, value) : null;
@@ -433,7 +446,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
         amount={amount}
         onAmountChange={(next) => {
           setAmount(next);
-          setStatus(null);
+          reset();
         }}
         caption={exceedsBalance ? "Exceeds your available balance" : `Amount in ${from.currency}`}
         isError={exceedsBalance}
@@ -462,7 +475,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
       </div>
 
       <div className="mt-5">
-        <TradeAction session={session} label="Exchange" disabledReason={disabledReason} isSubmitting={isSubmitting} status={status} />
+        <TradeAction session={session} label="Exchange" disabledReason={disabledReason} isSubmitting={isSubmitting} isConfirmed={isConfirmed} status={status} />
       </div>
     </form>
   );
@@ -544,7 +557,7 @@ function DepositForm({ session }: { session: TradeSession | null }) {
           className={cn(
             PRIMARY_BUTTON,
             "flex items-center justify-center gap-2",
-            isConfirmed && "disabled:cursor-default disabled:bg-[#141414] disabled:text-white dark:disabled:bg-white dark:disabled:text-[#141414]"
+            isConfirmed && CONFIRMED_BUTTON
           )}
         >
           {isConfirmed ? (

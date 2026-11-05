@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { ConnectedWallet } from "@privy-io/react-auth";
+import { Check } from "lucide-react";
 import { useTradingConfigured } from "@/components/privy-provider";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
 import { useTradingAccount, useTradingWallet, type TradingBalances, type WalletStatus } from "@/lib/hooks/useTrading";
@@ -68,6 +69,9 @@ export function canTrade(session: TradeSession | null): session is TradeSession 
 const PRIMARY_BUTTON =
   "h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40";
 const NOTE = "mt-3 text-center text-[13px] text-black/60 dark:text-white/60";
+/** A done button stays dark rather than greying out like an unavailable one. */
+export const CONFIRMED_BUTTON =
+  "disabled:cursor-default disabled:bg-[#141414] disabled:text-white dark:disabled:bg-white dark:disabled:text-[#141414]";
 
 /** How long a wallet may load before the dialog says it is stuck rather than loading. */
 const WALLET_STALL_MS = 10_000;
@@ -215,10 +219,13 @@ export function TradeAction({
   label,
   disabledReason,
   isSubmitting,
+  isConfirmed = false,
   status,
 }: {
   session: TradeSession | null;
   label: string;
+  /** The last order filled in full: the button reads Confirmed instead of reporting it underneath. */
+  isConfirmed?: boolean;
   /** Why the order can't be placed as entered; null when it can. */
   disabledReason: string | null;
   isSubmitting: boolean;
@@ -272,14 +279,27 @@ export function TradeAction({
 
   return (
     <>
-      <button type="submit" disabled={disabledReason !== null || isSubmitting} className={PRIMARY_BUTTON}>
-        {isSubmitting ? "Placing order" : label}
+      <button
+        type="submit"
+        disabled={isConfirmed || disabledReason !== null || isSubmitting}
+        className={cn(PRIMARY_BUTTON, "flex items-center justify-center gap-2", isConfirmed && CONFIRMED_BUTTON)}
+      >
+        {isConfirmed ? (
+          <>
+            <Check className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            Confirmed
+          </>
+        ) : isSubmitting ? (
+          "Placing order"
+        ) : (
+          label
+        )}
       </button>
       <p
         aria-live="polite"
         className={cn(NOTE, "min-h-5", status?.tone === "error" && "text-[#B4412F] dark:text-[#E98A7A]")}
       >
-        {status?.text ?? disabledReason ?? ""}
+        {isConfirmed ? "" : (status?.text ?? disabledReason ?? "")}
       </p>
     </>
   );
