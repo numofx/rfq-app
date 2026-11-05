@@ -25,16 +25,14 @@ const QUOTED_UNTIL = UNTIL_DATES[0];
 const SOON_ACTIONS = ["Exchange", "Direct", "Request", "Deposit", "Withdraw", "Transfer"];
 
 const MENU_ITEM =
-  "flex h-[42px] items-center justify-between rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
+  "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
 const MENU_CONTENT =
   "z-50 rounded-2xl bg-white p-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:bg-[#1A1A1A]";
-const LARGE_FIGURE = "font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]";
-const FIGURE_CAPTION = "mt-2 h-5 text-center text-[13px]";
-const FIELD_LABEL ="block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
+const FIELD_LABEL = "block pl-1 text-[14px] font-medium text-[#141414] dark:text-white";
 const FIELD_PILL =
-  "mt-2 flex h-12 w-full items-center gap-3 rounded-full bg-[#EFE7DC] px-[18px] outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
+  "mt-2 flex h-12 w-full items-center gap-2.5 rounded-full bg-[#EFE7DC] px-4 outline-none focus-within:ring-2 focus-within:ring-black/15 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/5 dark:focus-within:ring-white/20 dark:focus-visible:ring-white/20";
 const FIELD_CHEVRON = "ml-auto h-4 w-4 shrink-0 text-black/60 dark:text-white/60";
-const AVAILABLE = "font-mono text-[13px] text-black/60 dark:text-white/60";
+const AVAILABLE = "font-mono text-black/60 dark:text-white/60";
 
 const formatNumber = (value: number) =>
   value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,42 +41,92 @@ const formatSigned = (value: number) => `${value < 0 ? "−" : "+"}${formatNumbe
 
 const formatPercent = (fraction: number) => `${(fraction * 100).toFixed(2)}%`;
 
-function BreakdownRow({ label, value }: { label: string; value: string }) {
+function RateCardRow({ label, hint, value }: { label: string; hint?: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-black/60 dark:text-white/60">{label}</dt>
+      <dt className="text-black/70 dark:text-white/70">
+        {label}
+        {hint ? <span className="text-black/50 dark:text-white/50"> ({hint})</span> : null}
+      </dt>
       <dd className="text-right font-mono text-[#141414] dark:text-white">{value}</dd>
     </div>
   );
 }
 
-/** How the rate above is made up, then what locking the entered amount comes to. */
-function RateBreakdown({ quote, currency }: { quote: ForwardQuote; currency: string }) {
-  const { annualizedPremium, daysToExpiry, feePoints, feeRate, points, position, spot } = quote;
-  const premium = annualizedPremium === null ? "" : ` (${annualizedPremium < 0 ? "−" : "+"}${formatPercent(Math.abs(annualizedPremium))} a year)`;
+/** The rate and what locking the amount comes to, with how the rate is made up behind "Show details". */
+function RateCard({ quote, currency, message }: { quote: ForwardQuote | null; currency: string; message: string }) {
+  const [showDetails, setShowDetails] = useState(false);
+  const position = quote?.position ?? null;
+  const hasRows = quote !== null && (position !== null || showDetails);
+  const premium =
+    quote === null || quote.annualizedPremium === null
+      ? ""
+      : ` (${quote.annualizedPremium < 0 ? "−" : "+"}${formatPercent(Math.abs(quote.annualizedPremium))} a year)`;
 
   return (
-    <dl className="mt-4 space-y-1.5 rounded-2xl border border-black/10 px-4 py-3 text-[13px] dark:border-white/10">
-      <BreakdownRow label="Spot rate" value={formatNumber(spot)} />
-      <BreakdownRow label="Forward points" value={`${formatSigned(points)}${premium}`} />
-      <BreakdownRow
-        label={`Fee (${formatPercent(feeRate)})`}
-        value={`${formatSigned(feePoints)}${position ? ` ($${formatNumber(position.feeUsdc)})` : ""}`}
-      />
-      {position ? (
-        <>
-          <BreakdownRow
-            label="You lock"
-            value={currency === "USDC" ? `₦${formatNumber(position.locked)}` : `$${formatNumber(position.locked)}`}
-          />
-          <BreakdownRow
-            label={`Margin required (${INITIAL_MARGIN_RATE * 100}%)`}
-            value={`$${formatNumber(position.marginUsdc)}`}
-          />
-        </>
+    <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
+      <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
+        <p className="min-w-0 font-medium text-[#141414] dark:text-white">
+          Rate{" "}
+          <span className="text-[13px] font-normal text-black/60 dark:text-white/60">
+            {quote === null ? message : "cNGN per USDC, after fees"}
+          </span>
+        </p>
+        <p
+          className={cn(
+            "shrink-0 font-mono text-[20px] font-semibold leading-none",
+            quote === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
+          )}
+        >
+          {quote === null ? "—" : formatNumber(quote.rate)}
+        </p>
+      </div>
+
+      {hasRows ? (
+        <dl className="mx-[18px] space-y-2 border-t border-black/[0.07] pb-3 pt-3 dark:border-white/10">
+          {position ? (
+            <>
+              <RateCardRow
+                label="You lock"
+                value={currency === "USDC" ? `₦${formatNumber(position.locked)}` : `$${formatNumber(position.locked)}`}
+              />
+              <RateCardRow
+                label="Margin required"
+                hint={`${INITIAL_MARGIN_RATE * 100}%`}
+                value={`$${formatNumber(position.marginUsdc)}`}
+              />
+            </>
+          ) : null}
+          {showDetails ? (
+            <>
+              <RateCardRow label="Spot rate" value={formatNumber(quote.spot)} />
+              <RateCardRow label="Forward points" value={`${formatSigned(quote.points)}${premium}`} />
+              <RateCardRow
+                label="Fee"
+                hint={formatPercent(quote.feeRate)}
+                value={`${formatSigned(quote.feePoints)}${position ? ` ($${formatNumber(position.feeUsdc)})` : ""}`}
+              />
+              <RateCardRow
+                label="Settles"
+                value={`In ${quote.daysToExpiry} ${quote.daysToExpiry === 1 ? "day" : "days"}, cash in USDC`}
+              />
+            </>
+          ) : null}
+        </dl>
       ) : null}
-      <BreakdownRow label="Settles" value={`In ${daysToExpiry} ${daysToExpiry === 1 ? "day" : "days"}, cash in USDC`} />
-    </dl>
+
+      {quote === null ? null : (
+        <button
+          type="button"
+          aria-expanded={showDetails}
+          onClick={() => setShowDetails((current) => !current)}
+          className="flex h-9 w-full items-center justify-center gap-1.5 rounded-b-2xl border-t border-black/[0.07] text-[13px] font-medium text-[#141414] outline-none hover:bg-black/[0.03] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black/15 dark:border-white/10 dark:text-white dark:hover:bg-white/5 dark:focus-visible:ring-white/20"
+        >
+          {showDetails ? "Hide details" : "Show details"}
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showDetails && "rotate-180")} aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -110,12 +158,12 @@ function LockRateForm() {
 
   return (
     <form
-      className="mt-6"
+      className="mt-5"
       onSubmit={(event) => {
         event.preventDefault();
       }}
     >
-      <div className={cn(LARGE_FIGURE, "flex items-baseline justify-center")}>
+      <div className="flex items-baseline justify-center font-mono text-[48px] font-semibold leading-none tracking-[-0.02em]">
         <span className="text-black/40 dark:text-white/50">{account.symbol}</span>
         <input
           autoFocus
@@ -136,114 +184,109 @@ function LockRateForm() {
       <p
         aria-live="polite"
         className={cn(
-          FIGURE_CAPTION,
+          "mt-2 h-5 text-center text-[13px]",
           exceedsBalance ? "text-[#B4412F] dark:text-[#E98A7A]" : "text-black/60 dark:text-white/60"
         )}
       >
         {exceedsBalance ? "Exceeds your available balance" : `Amount in ${account.currency}`}
       </p>
 
-      <div className="mt-6">
-        <span id="lock-rate-account" className={FIELD_LABEL}>
-          Account
-        </span>
-        <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              aria-labelledby="lock-rate-account lock-rate-account-value"
-              className={cn(FIELD_PILL, "pl-[11px] pr-[18px]")}
-            >
-              <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
-              <span id="lock-rate-account-value" className="flex min-w-0 items-baseline gap-2.5 text-[16px] font-medium text-[#141414] dark:text-white">
-                {account.currency}
-                <span className={cn(AVAILABLE, "truncate font-normal")}>
-                  {account.symbol}
-                  {account.balance} available
+      {/* Too narrow side by side on a phone. */}
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+        <div className="min-w-0">
+          <span id="lock-rate-account" className={FIELD_LABEL}>
+            Account
+          </span>
+          <DropdownMenu.Root modal={false}>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                aria-labelledby="lock-rate-account lock-rate-account-value"
+                className={cn(FIELD_PILL, "pl-[9px] pr-3.5")}
+              >
+                <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
+                <span id="lock-rate-account-value" className="min-w-0 text-left text-[14px] font-medium leading-tight text-[#141414] dark:text-white">
+                  <span className="block">{account.currency}</span>
+                  <span className={cn(AVAILABLE, "block truncate text-[12px] font-normal")}>
+                    {account.symbol}
+                    {account.balance} avail.
+                  </span>
                 </span>
-              </span>
-              <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              align="start"
-              sideOffset={6}
-              className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
-            >
-              {ACCOUNTS.map(({ iconSrc, currency, symbol, balance }) => (
-                <DropdownMenu.Item
-                  key={currency}
-                  onSelect={() => setAccountCode(currency)}
-                  className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-                >
-                  <span className="flex items-center gap-2.5 font-medium">
-                    <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
-                    {currency}
-                  </span>
-                  <span className={AVAILABLE}>
-                    {symbol}
-                    {balance} available
-                  </span>
-                </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+                <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="start"
+                sideOffset={6}
+                className={cn(MENU_CONTENT, "min-w-[var(--radix-dropdown-menu-trigger-width)]")}
+              >
+                {ACCOUNTS.map(({ iconSrc, currency, symbol, balance }) => (
+                  <DropdownMenu.Item
+                    key={currency}
+                    onSelect={() => setAccountCode(currency)}
+                    className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+                  >
+                    <span className="flex items-center gap-2.5 font-medium">
+                      <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
+                      {currency}
+                    </span>
+                    <span className={cn(AVAILABLE, "text-[13px]")}>
+                      {symbol}
+                      {balance} available
+                    </span>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        </div>
+
+        <div className="min-w-0">
+          <span id="lock-rate-until" className={FIELD_LABEL}>
+            Until
+          </span>
+          <DropdownMenu.Root modal={false}>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                aria-labelledby="lock-rate-until lock-rate-until-value"
+                className={FIELD_PILL}
+              >
+                <Calendar className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />
+                <span id="lock-rate-until-value" className="truncate text-[14px] font-medium text-[#141414] dark:text-white">
+                  {until}
+                </span>
+                <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="start"
+                sideOffset={6}
+                className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
+              >
+                {UNTIL_DATES.map((date) => (
+                  <DropdownMenu.Item
+                    key={date}
+                    onSelect={() => setUntil(date)}
+                    className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+                  >
+                    {date}
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        </div>
       </div>
 
-      <div className="mt-4">
-        <span id="lock-rate-until" className={FIELD_LABEL}>
-          Until
-        </span>
-        <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              aria-labelledby="lock-rate-until lock-rate-until-value"
-              className={FIELD_PILL}
-            >
-              <Calendar className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />
-              <span id="lock-rate-until-value" className="text-[16px] font-medium text-[#141414] dark:text-white">
-                {until}
-              </span>
-              <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              align="start"
-              sideOffset={6}
-              className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}
-            >
-              {UNTIL_DATES.map((date) => (
-                <DropdownMenu.Item
-                  key={date}
-                  onSelect={() => setUntil(date)}
-                  className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-                >
-                  {date}
-                </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-      </div>
-
-      <div className="mt-6">
-        <p className={cn(LARGE_FIGURE, "text-center", quote === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
-          {quote === null ? "—" : formatNumber(quote.rate)}
-        </p>
-        <p className={cn(FIGURE_CAPTION, "text-black/60 dark:text-white/60")}>
-          {quote === null ? rateMessage : "Forward rate in cNGN per USDC, after fees"}
-        </p>
-        {quote === null ? null : <RateBreakdown quote={quote} currency={account.currency} />}
-      </div>
+      <RateCard quote={quote} currency={account.currency} message={rateMessage} />
 
       <button
         type="submit"
         disabled={!canLockRate}
-        className="mt-7 h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
+        className="mt-5 h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40"
       >
         Lock rate
       </button>
@@ -293,9 +336,9 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-md" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[464px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
+            className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
           >
-            <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-7">
+            <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-8">
               <Dialog.Title className="text-center text-[17px] font-semibold tracking-[-0.01em] text-[#141414] dark:text-white">
                 Lock rate
               </Dialog.Title>
