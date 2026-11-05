@@ -14,7 +14,7 @@ import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
 import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
 import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
-import { placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
+import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
 const UNTIL_DATES = [
@@ -284,7 +284,7 @@ function useOrderSubmission(session: TradeSession | null) {
     setIsConfirmed(false);
     try {
       const order = await placeOrder({ market, plan, subaccountId: session.subaccountId, wallet: session.wallet });
-      if (order.outcome?.status === "filled") {
+      if (isFullyFilled(order.outcome, order.units)) {
         setIsConfirmed(true);
       } else {
         setStatus(describeOutcome(order, market, filledText));
@@ -359,8 +359,8 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
           setAmount(next);
           reset();
         }}
-        caption={isShortOfMargin ? "Not enough margin for this amount" : `Amount in ${account.currency}`}
-        isError={isShortOfMargin}
+        caption={isShortOfMargin && !isConfirmed ? "Not enough margin for this amount" : `Amount in ${account.currency}`}
+        isError={isShortOfMargin && !isConfirmed}
       />
 
       {/* Too narrow side by side on a phone. */}
@@ -448,8 +448,8 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
           setAmount(next);
           reset();
         }}
-        caption={exceedsBalance ? "Exceeds your available balance" : `Amount in ${from.currency}`}
-        isError={exceedsBalance}
+        caption={exceedsBalance && !isConfirmed ? "Exceeds your available balance" : `Amount in ${from.currency}`}
+        isError={exceedsBalance && !isConfirmed}
       />
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">

@@ -106,11 +106,17 @@ export type OrderOutcome = {
   cancel_reason?: string;
 };
 
-/** Done, or resting with part filled: an active order with nothing filled may still cross. */
-function isFillKnown(outcome: OrderOutcome | null) {
-  if (!outcome?.status) return false;
-  if (outcome.status === "active") return Number(outcome.filled_amount ?? "0") > 0;
-  return ["filled", "expired", "cancelled"].includes(outcome.status);
+/**
+ * Whether the whole order filled. The venue can report the full amount filled while the status
+ * still reads "active", for a moment after the match, so the amount decides, not the status.
+ */
+export function isFullyFilled(outcome: OrderOutcome | null, units: number) {
+  return outcome?.status === "filled" || Number(outcome?.filled_amount ?? "0") >= units;
+}
+
+/** Done: filled in full, or ended (expired or cancelled). A partial fill may still complete. */
+function isFillKnown(outcome: OrderOutcome | null, units: number) {
+  return isFullyFilled(outcome, units) || outcome?.status === "expired" || outcome?.status === "cancelled";
 }
 
 async function readOrder(orderId: string): Promise<OrderOutcome | null> {
@@ -184,7 +190,7 @@ export async function placeOrder({
   const orderId = envelope.payload.order_id;
   const deadline = Date.now() + FILL_POLL_TIMEOUT_MS;
   let outcome = await readOrder(orderId);
-  while (!isFillKnown(outcome) && Date.now() < deadline) {
+  while (!isFillKnown(outcome, plan.units) && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, FILL_POLL_INTERVAL_MS));
     outcome = await readOrder(orderId);
   }
