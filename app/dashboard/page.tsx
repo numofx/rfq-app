@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { BalanceHeader } from "@/components/dashboard/balance-header";
 import { AccountCards } from "@/components/dashboard/account-cards";
 import { MoveMoney } from "@/components/dashboard/move-money";
-import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
+import { TransactionsEmpty } from "@/components/dashboard/transactions-empty";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
 
@@ -41,17 +42,14 @@ export default function TradePage() {
             <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#141414] dark:text-white">
               Transactions
             </h2>
-            {/* Not a link until there is a transactions page to open. */}
-            <span className="text-[14px] text-black/55 dark:text-white/60">View all</span>
+            <Link
+              href="/transactions"
+              className="text-[14px] text-black/55 transition-colors hover:text-[#141414] dark:text-white/60 dark:hover:text-white"
+            >
+              View all
+            </Link>
           </div>
-          <div className={`mt-4 ${PANEL_TRAY}`}>
-            <div className={`${PANEL_CARD} px-6 py-10 text-center`}>
-              <p className="text-[15px] font-medium text-[#141414] dark:text-white">No transactions yet</p>
-              <p className="mt-1 text-[14px] text-black/55 dark:text-white/60">
-                Exchanges and transfers will show up here.
-              </p>
-            </div>
-          </div>
+          <TransactionsEmpty />
         </section>
       </div>
     </SidebarLayout>

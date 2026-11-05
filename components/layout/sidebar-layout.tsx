@@ -165,7 +165,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1">
           <div className="space-y-0.5">
             <SidebarItem icon={Home} label="Home" href="/dashboard" isActive={pathname === "/dashboard"} />
-            <SidebarItem icon={List} label="Transactions" href="#" />
+            <SidebarItem icon={List} label="Transactions" href="/transactions" isActive={pathname === "/transactions"} />
             <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/profile"} />
           </div>
 
