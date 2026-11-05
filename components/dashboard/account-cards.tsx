@@ -1,11 +1,15 @@
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
+import { accountHoldings, WithTradeSession } from "@/components/dashboard/trade-session";
 
 export const ACCOUNTS = [
   { iconSrc: "/tokens/usdc.svg", currency: "USDC", symbol: "$", balance: "0.00" },
   { iconSrc: "/tokens/cngn.png", currency: "cNGN", symbol: "₦", balance: "0.00" },
 ];
+
+const formatBalance = (value: number) =>
+  value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function AccountCards() {
   return (
@@ -20,7 +24,14 @@ export function AccountCards() {
               <p className="text-[15px] font-medium text-[#141414] dark:text-white">{currency}</p>
               <p className="mt-0.5 font-mono text-[14px] text-black/70 dark:text-white/70">
                 {symbol}
-                {balance}
+                <WithTradeSession>
+                  {(session) => {
+                    const holdings = accountHoldings(session);
+                    if (holdings === "none") return balance;
+                    if (holdings === null) return "—";
+                    return formatBalance(currency === "USDC" ? holdings.usdc : holdings.cngn);
+                  }}
+                </WithTradeSession>
               </p>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-black/55 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />

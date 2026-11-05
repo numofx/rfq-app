@@ -8,6 +8,7 @@ import { BalanceHeader } from "@/components/dashboard/balance-header";
 import { AccountCards } from "@/components/dashboard/account-cards";
 import { MoveMoney } from "@/components/dashboard/move-money";
 import { TransactionsEmpty } from "@/components/dashboard/transactions-empty";
+import { accountHoldings, WithTradeSession } from "@/components/dashboard/trade-session";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
 
@@ -19,7 +20,14 @@ export default function TradePage() {
   return (
     <SidebarLayout>
       <div className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-6 md:px-12 md:pt-8">
-        <WelcomeBanner onAddFunds={() => router.push("/dashboard?action=deposit")} />
+        {/* Only for an account with nothing in it yet. */}
+        <WithTradeSession>
+          {(session) => {
+            const holdings = accountHoldings(session);
+            const isFunded = holdings !== null && holdings !== "none" && holdings.usdc + holdings.cngn > 0;
+            return isFunded ? null : <WelcomeBanner onAddFunds={() => router.push("/dashboard?action=deposit")} />;
+          }}
+        </WithTradeSession>
 
         {/* Greeting */}
         <div className="flex items-start justify-between gap-4">

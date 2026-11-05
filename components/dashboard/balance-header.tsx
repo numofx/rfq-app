@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { addMilliseconds, format, startOfYear, subDays, subMonths } from "date-fns";
 import { Info } from "lucide-react";
 import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
+import { accountHoldings, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
+import { useVenueMarket } from "@/lib/hooks/useTrading";
+import { SPOT_SYMBOL } from "@/lib/venue/market";
 import { cn } from "@/lib/utils";
 
 const RANGES = ["1W", "1M", "3M", "YTD", "All"] as const;
@@ -33,6 +36,23 @@ function getRangeLabels(range: Range, accountCreatedAt: string | null) {
   );
 }
 
+/** The trading account's USDC plus its cNGN at the spot mid, or a dash while either is unknown. */
+function TotalBalance({ session }: { session: TradeSession | null }) {
+  const { market } = useVenueMarket(SPOT_SYMBOL);
+  const holdings = accountHoldings(session);
+  const bid = market?.bids[0]?.price;
+  const ask = market?.asks[0]?.price;
+  const mid = bid && ask ? (bid + ask) / 2 : null;
+
+  let total: string = "—";
+  if (holdings === "none") total = "0.00";
+  else if (holdings && (holdings.cngn === 0 || mid !== null)) {
+    const usd = holdings.usdc + holdings.cngn * (mid ?? 0);
+    total = usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return <>{total}</>;
+}
+
 export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: string | null }) {
   const [range, setRange] = useState<Range>("1W");
   const labels = useMemo(() => getRangeLabels(range, accountCreatedAt), [range, accountCreatedAt]);
@@ -47,7 +67,8 @@ export function BalanceHeader({ accountCreatedAt = null }: { accountCreatedAt?: 
               <Info className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
             </div>
             <p className="mt-2 font-mono text-[40px] font-semibold leading-none tracking-[-0.02em] text-[#141414] dark:text-white sm:text-[52px]">
-              <span className="text-black/40 dark:text-white/50">$</span>0.00
+              <span className="text-black/40 dark:text-white/50">$</span>
+              <WithTradeSession>{(session) => <TotalBalance session={session} />}</WithTradeSession>
             </p>
           </div>
 

@@ -284,3 +284,13 @@ export function TradeAction({
     </>
   );
 }
+
+/**
+ * The trading account's balances, `"none"` once the lookup has found no account, or null while
+ * they are unknown: not verified in this browser yet, or still loading.
+ */
+export function accountHoldings(session: TradeSession | null): TradingBalances | "none" | null {
+  if (!session?.isAuthenticated || session.wallet === null || session.isResolving) return null;
+  if (session.subaccountId === null) return session.lookupFailed ? null : "none";
+  return session.balances;
+}
