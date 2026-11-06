@@ -91,6 +91,38 @@ export function planOrder(market: VenueMarket, currency: "USDC" | "cNGN", amount
 }
 
 /**
+ * The order that closes a futures position of `cngn` (positive): it sells a long into the bids, or
+ * buys a short back off the asks. Returns a reason instead when it can't be placed.
+ */
+export function planClose(market: VenueMarket, side: "long" | "short", cngn: number): OrderPlan | string {
+  if (!market.isOpen) return "This market isn't trading right now";
+  const closeSide = side === "long" ? "sell" : "buy";
+  const levels = closeSide === "buy" ? market.asks : market.bids;
+  if (levels.length === 0) return "No liquidity right now";
+  const units = Math.round(cngn / market.unitCngn);
+  if (units < 1) return "Nothing to close";
+
+  const worst = worstFillPrice(levels, units);
+  const expectedPrice = averageFillPrice(levels, units);
+  if (worst === null || expectedPrice === null) return "Not enough liquidity to close it all at once";
+
+  let limit = closeSide === "buy" ? worst * (1 + MAX_SLIPPAGE) : worst * (1 - MAX_SLIPPAGE);
+  if (market.fillBand) limit = Math.min(market.fillBand.high, Math.max(market.fillBand.low, limit));
+
+  const notionalUsdc = units * market.unitCngn * expectedPrice;
+  return {
+    side: closeSide,
+    units,
+    limitPrice: limit.toFixed(10),
+    expectedPrice,
+    cngn: units * market.unitCngn,
+    notionalUsdc,
+    feeUsdc: notionalUsdc * (market.takerFeeBps / 10_000),
+    marginUsdc: null,
+  };
+}
+
+/**
  * The signed fee ceiling per contract, 18 decimals, at the highest price the order can fill at.
  * From trading-app future-market.ts futureWorstFeeUnits, for a contract sized in cNGN.
  */

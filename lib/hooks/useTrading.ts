@@ -7,6 +7,7 @@ import { CNGN_ASSET, TRADING_MANAGER_ADDRESS, USDC_CASH_ASSET } from "@/lib/venu
 import { readWalletUsdc } from "@/lib/venue/deposit";
 import { readTransactions } from "@/lib/venue/transactions";
 import type { VenueMarket, VenueSymbol } from "@/lib/venue/market";
+import type { PositionsResponse } from "@/lib/venue/positions";
 import { findTradingSubaccountId, LEDGER_DECIMALS, readBalanceHistory, readLedgerBalances } from "@/lib/venue/subaccount";
 
 const MARKET_POLL_MS = 5000;
@@ -142,6 +143,22 @@ export function useBalanceHistory(subaccountId: string | null, rangeKey: string,
     retry: 1,
   });
   return { history: data ?? null, isLoading: subaccountId !== null && isPending };
+}
+
+/** The account's open futures and margin. Null while loading or after a failed read. */
+export function usePositions(subaccountId: string | null) {
+  const { data, isError, isPending, refetch } = useQuery({
+    queryKey: ["positions", subaccountId],
+    queryFn: async (): Promise<PositionsResponse> => {
+      const response = await fetch(`/api/venue/positions?subaccount_id=${subaccountId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`positions responded ${response.status}`);
+      return (await response.json()) as PositionsResponse;
+    },
+    enabled: subaccountId !== null,
+    refetchInterval: BALANCE_POLL_MS,
+    retry: 1,
+  });
+  return { positions: data ?? null, isLoading: subaccountId !== null && isPending, isError, refresh: () => void refetch() };
 }
 
 /** The trading account's transactions, newest first. Null while loading or after a failed read. */
