@@ -14,7 +14,10 @@ import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
 import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
 import { TOKEN_DECIMALS, withdraw } from "@/lib/venue/withdraw";
-import { parseUnits } from "viem";
+import { createWalletClient, custom, parseUnits } from "viem";
+import { useSendTransaction } from "@privy-io/react-auth";
+import { getAppChain } from "@/lib/venue/config";
+import { recipientProblem, usdcTransfer, waitForTransfer } from "@/lib/venue/send";
 import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
@@ -36,7 +39,7 @@ const SOON_ACTIONS = ["Direct", "Request", "Transfer"];
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
 type Status = { tone: "neutral" | "error"; text: string } | null;
-type DialogKind = "lock-rate" | "exchange" | "deposit" | "withdraw";
+type DialogKind = "lock-rate" | "exchange" | "deposit" | "withdraw" | "send";
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -488,6 +491,10 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
 const PRIMARY_BUTTON =
   "h-[50px] w-full rounded-full bg-[#141414] text-[16px] font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:bg-[#E5DDD0] disabled:text-black/55 dark:bg-white dark:text-[#141414] dark:disabled:bg-white/10 dark:disabled:text-white/40";
 const NOTE = "mt-3 text-center text-[13px] text-black/60 dark:text-white/60";
+const LINK = "font-medium text-[#141414] underline underline-offset-2 hover:opacity-70 dark:text-white";
+const BASESCAN_TX_URL = "https://basescan.org/tx/";
+
+const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
 
 /**
  * Moves USDC from the trading wallet into its trading account, opening the account on the first
@@ -649,13 +656,15 @@ function DepositForm({ session }: { session: TradeSession | null }) {
  * Moves funds from the trading account back to the wallet that owns it. The venue pays the gas and
  * only ever pays the owner, so there is no address to enter. Mounted only while open.
  */
-function WithdrawForm({ session }: { session: TradeSession | null }) {
+function WithdrawForm({ session, onSend }: { session: TradeSession | null; onSend: () => void }) {
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<Currency>("USDC");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  // What the last confirmed withdrawal paid, and where, so the user can see the money arrive.
+  const [paid, setPaid] = useState<{ text: string; txHash: string } | null>(null);
   const account = ACCOUNTS.find((candidate) => candidate.currency === currency) ?? ACCOUNTS[0];
   const address = session?.wallet?.address ?? null;
 
@@ -666,11 +675,13 @@ function WithdrawForm({ session }: { session: TradeSession | null }) {
   function reset() {
     setStatus(null);
     setIsConfirmed(false);
+    setPaid(null);
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!canTrade(session) || !(value > 0) || exceedsBalance) return;
+    const to = shortAddress(session.wallet.address);
     setIsSubmitting(true);
     reset();
     try {
@@ -680,8 +691,12 @@ function WithdrawForm({ session }: { session: TradeSession | null }) {
         subaccountId: session.subaccountId,
         wallet: session.wallet,
       });
-      if (outcome.kind === "settled") setIsConfirmed(true);
-      else if (outcome.kind === "pending") setStatus({ tone: "neutral", text: "Withdrawal sent. It can take a minute to reach your wallet." });
+      if (outcome.kind === "settled") {
+        setIsConfirmed(true);
+        setPaid({ text: `Sent ${formatMoney(currency, value)} to your wallet ${to}.`, txHash: outcome.txHash });
+      } else if (outcome.kind === "pending") {
+        setStatus({ tone: "neutral", text: `Withdrawal sent to your wallet ${to}. It can take a minute to arrive.` });
+      }
       else setStatus({ tone: "error", text: outcome.reason });
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "The withdrawal could not be sent." });
@@ -734,7 +749,24 @@ function WithdrawForm({ session }: { session: TradeSession | null }) {
           )}
         </button>
         <p aria-live="polite" className={cn(NOTE, "min-h-5", status?.tone === "error" && ERROR_TEXT)}>
-          {isConfirmed ? "" : (status?.text ?? "")}
+          {paid ? (
+            <>
+              {paid.text}{" "}
+              <a href={`${BASESCAN_TX_URL}${paid.txHash}`} target="_blank" rel="noreferrer" className={LINK}>
+                View transaction
+              </a>
+              {currency === "USDC" ? (
+                <>
+                  {" · "}
+                  <button type="button" onClick={onSend} className={LINK}>
+                    Send it on
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : (
+            (status?.text ?? "")
+          )}
         </p>
       </>
     );
@@ -782,6 +814,172 @@ function WithdrawForm({ session }: { session: TradeSession | null }) {
   );
 }
 
+/**
+ * Sends the wallet's USDC to any address on Base. Gas is sponsored through Privy for the embedded
+ * wallet, which holds no ETH; a browser wallet pays its own. Mounted only while open.
+ */
+function SendForm({ session }: { session: TradeSession | null }) {
+  if (session === null) {
+    return (
+      <div className="mt-5">
+        <button type="button" disabled className={PRIMARY_BUTTON}>Send</button>
+        <p className={NOTE}>Sending isn&apos;t available yet.</p>
+      </div>
+    );
+  }
+  return <SendFormReady session={session} />;
+}
+
+function SendFormReady({ session }: { session: TradeSession }) {
+  const queryClient = useQueryClient();
+  const { sendTransaction } = useSendTransaction();
+  const [amount, setAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<Status>(null);
+  const [sent, setSent] = useState<{ text: string; txHash: string } | null>(null);
+  const address = session.wallet?.address ?? null;
+  const walletUsdc = useWalletUsdc(address);
+  const usdc = ACCOUNTS[0];
+
+  const value = Number(amount);
+  const exceedsWallet = walletUsdc !== null && value > walletUsdc && sent === null;
+  const problem = recipientProblem(recipient, address);
+  const isReadyToSend = value > 0 && !exceedsWallet && recipient.trim() !== "" && problem === null;
+
+  function reset() {
+    setStatus(null);
+    setSent(null);
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    const wallet = session.wallet;
+    if (!wallet || !isReadyToSend) return;
+    setIsSubmitting(true);
+    reset();
+    const call = usdcTransfer(recipient, amount);
+    const chain = getAppChain();
+    try {
+      let hash: `0x${string}`;
+      if (wallet.walletClientType === "privy") {
+        ({ hash } = await sendTransaction(
+          { ...call, chainId: chain.id },
+          { sponsor: true, address: wallet.address, uiOptions: { showWalletUIs: false } }
+        ));
+      } else {
+        await wallet.switchChain(chain.id);
+        const walletClient = createWalletClient({ chain, transport: custom(await wallet.getEthereumProvider()) });
+        hash = await walletClient.sendTransaction({ account: wallet.address as `0x${string}`, ...call });
+      }
+      const succeeded = await waitForTransfer(hash);
+      const to = shortAddress(recipient.trim());
+      if (succeeded === true) setSent({ text: `Sent ${formatMoney("USDC", value)} to ${to}.`, txHash: hash });
+      else if (succeeded === false) setStatus({ tone: "error", text: "The transfer reverted. Nothing was sent." });
+      else setSent({ text: `Sending ${formatMoney("USDC", value)} to ${to}. It can take a minute to arrive.`, txHash: hash });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setStatus({
+        tone: "error",
+        text: /sponsor/i.test(message)
+          ? "Gas sponsorship isn't available for this wallet right now. Nothing was sent."
+          : message || "The transfer could not be sent. Nothing was sent.",
+      });
+    } finally {
+      setIsSubmitting(false);
+      void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+    }
+  }
+
+  let action: ReactNode;
+  if (!session.isReady) {
+    action = <button type="button" disabled className={PRIMARY_BUTTON}>Loading</button>;
+  } else if (!session.isAuthenticated) {
+    action = <EmailVerification session={session} />;
+  } else if (session.wallet === null) {
+    action = <WalletStep session={session} label="Send" />;
+  } else {
+    const isDone = sent !== null;
+    action = (
+      <>
+        <button
+          type="submit"
+          disabled={isDone || isSubmitting || !isReadyToSend}
+          className={cn(PRIMARY_BUTTON, "flex items-center justify-center gap-2", isDone && CONFIRMED_BUTTON)}
+        >
+          {isDone ? (
+            <>
+              <Check className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+              Confirmed
+            </>
+          ) : isSubmitting ? (
+            "Sending"
+          ) : (
+            "Send"
+          )}
+        </button>
+        <p aria-live="polite" className={cn(NOTE, "min-h-5", status?.tone === "error" && ERROR_TEXT)}>
+          {sent ? (
+            <>
+              {sent.text}{" "}
+              <a href={`${BASESCAN_TX_URL}${sent.txHash}`} target="_blank" rel="noreferrer" className={LINK}>
+                View transaction
+              </a>
+            </>
+          ) : (
+            (status?.text ?? "")
+          )}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <form className="mt-5" onSubmit={onSubmit}>
+      <AmountField
+        account={usdc}
+        amount={amount}
+        onAmountChange={(next) => {
+          setAmount(next);
+          reset();
+        }}
+        caption={exceedsWallet ? "More than your wallet holds" : "Amount in USDC"}
+        isError={exceedsWallet}
+      />
+
+      <label className="mt-5 block">
+        <span className={FIELD_LABEL}>To</span>
+        <input
+          value={recipient}
+          onChange={(event) => {
+            setRecipient(event.target.value);
+            reset();
+          }}
+          placeholder="0x… address on Base"
+          spellCheck={false}
+          autoComplete="off"
+          aria-invalid={problem !== null}
+          aria-describedby="send-recipient-help"
+          className={cn(FIELD_PILL, "font-mono text-[14px] text-[#141414] placeholder:font-sans placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40")}
+        />
+      </label>
+      <p id="send-recipient-help" className={cn("mt-2 min-h-5 pl-1 text-[13px]", problem ? ERROR_TEXT : "text-black/60 dark:text-white/60")}>
+        {problem ?? "Only send to an address that accepts USDC on Base. Sends can't be reversed."}
+      </p>
+
+      <div className="mt-4 rounded-2xl bg-[#F3EFE9] px-[18px] py-3.5 text-[14px] dark:bg-white/5">
+        <dl className="space-y-2">
+          <RateCardRow label="From your wallet" value={address ? shortAddress(address) : "—"} />
+          <RateCardRow label="Available" value={walletUsdc === null ? "—" : formatMoney("USDC", walletUsdc)} />
+          <RateCardRow label="Network fee" value={session.wallet?.walletClientType === "privy" ? "Covered by Numo" : "Paid in ETH"} />
+        </dl>
+      </div>
+
+      <div className="mt-5">{action}</div>
+    </form>
+  );
+}
+
 function TradeDialog({ title, open, onOpenChange, children }: { title: string; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -817,7 +1015,7 @@ function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
   const action = searchParams.get("action");
 
   useEffect(() => {
-    if (action === "exchange" || action === "lock-rate" || action === "deposit" || action === "withdraw") {
+    if (action === "exchange" || action === "lock-rate" || action === "deposit" || action === "withdraw" || action === "send") {
       onOpen(action);
       router.replace(pathname);
     }
@@ -856,6 +1054,7 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
                 ["exchange", "Exchange"],
                 ["deposit", "Deposit"],
                 ["withdraw", "Withdraw"],
+                ["send", "Send"],
               ] as const
             ).map(([kind, label]) => (
               <DropdownMenu.Item
@@ -888,7 +1087,10 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
         <WithTradeSession>{(session) => <DepositForm session={session} />}</WithTradeSession>
       </TradeDialog>
       <TradeDialog title="Withdraw" open={dialog === "withdraw"} onOpenChange={closeUnless("withdraw")}>
-        <WithTradeSession>{(session) => <WithdrawForm session={session} />}</WithTradeSession>
+        <WithTradeSession>{(session) => <WithdrawForm session={session} onSend={() => setDialog("send")} />}</WithTradeSession>
+      </TradeDialog>
+      <TradeDialog title="Send" open={dialog === "send"} onOpenChange={closeUnless("send")}>
+        <WithTradeSession>{(session) => <SendForm session={session} />}</WithTradeSession>
       </TradeDialog>
     </>
   );
