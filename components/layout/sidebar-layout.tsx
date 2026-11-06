@@ -11,12 +11,12 @@ import {
   ChevronDown,
   Home,
   Landmark,
-  Layers,
   List,
   LogOut,
   Moon,
   Settings,
   Sun,
+  TrendingUp,
   User,
 } from "lucide-react";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
@@ -168,7 +168,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1">
           <div className="space-y-0.5">
             <SidebarItem icon={Home} label="Home" href="/dashboard" isActive={pathname === "/dashboard"} />
-            <SidebarItem icon={Layers} label="Positions" href="/positions" isActive={pathname === "/positions"} />
+            <SidebarItem icon={TrendingUp} label="Positions" href="/positions" isActive={pathname === "/positions"} />
             <SidebarItem icon={List} label="Transactions" href="/transactions" isActive={pathname === "/transactions"} />
             <SidebarItem icon={Settings} label="Settings" href="/account" isActive={pathname === "/profile"} />
           </div>
