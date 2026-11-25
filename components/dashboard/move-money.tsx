@@ -6,7 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
@@ -414,30 +414,95 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
   );
 }
 
+const SWAP_PANEL = "rounded-2xl px-5 pb-4 pt-4 transition-colors";
+const SWAP_PANEL_IDLE = "bg-[#F3EFE9] dark:bg-white/5";
+const SWAP_PANEL_ERROR = "bg-[#FBEBE7] dark:bg-[#E98A7A]/10";
+const SWAP_LABEL = "text-[14px] text-black/70 dark:text-white/70";
+const SWAP_BALANCE = "font-mono text-[12px] text-black/60 dark:text-white/60";
+
+/** The white token pill on a swap panel, with a menu of the accounts. */
+function TokenPicker({ label, account, onSelect }: { label: string; account: Account; onSelect: (currency: Currency) => void }) {
+  return (
+    <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label={`${label}: ${account.currency}`}
+          className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-white pl-1.5 pr-3 text-[15px] font-semibold text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:focus-visible:ring-white/20"
+        >
+          <Image src={account.iconSrc} alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-full object-cover" />
+          {account.currency}
+          <ChevronDown className="h-4 w-4 text-black/60 dark:text-white/60" aria-hidden="true" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="end" sideOffset={6} className={cn(MENU_CONTENT, "min-w-[180px]")}>
+          {ACCOUNTS.map(({ iconSrc, currency }) => (
+            <DropdownMenu.Item
+              key={currency}
+              onSelect={() => onSelect(currency as Currency)}
+              className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+            >
+              <span className="flex items-center gap-2.5 font-medium">
+                <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
+                {currency}
+              </span>
+              {currency === account.currency ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function SwapDetailRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className={strong ? "font-semibold text-[#141414] dark:text-white" : "text-black/70 dark:text-white/70"}>{label}</dt>
+      <dd className={cn("text-right font-mono text-[#141414] dark:text-white", strong && "font-semibold")}>{value}</dd>
+    </div>
+  );
+}
+
 /** Converts between the accounts at the spot rate: a market order on cNGN-USDC. Mounted only while open. */
 function ExchangeForm({ session }: { session: TradeSession | null }) {
   const [amount, setAmount] = useState("");
   const [fromCode, setFromCode] = useState<Currency>("USDC");
   const from = ACCOUNTS.find(({ currency }) => currency === fromCode) ?? ACCOUNTS[0];
   const toCode = otherCurrency(fromCode);
+  const to = ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1];
   const { market, isPending } = useVenueMarket(SPOT_SYMBOL);
   const { isConfirmed, isSubmitting, status, reset, submit } = useOrderSubmission(session);
 
   const value = Number(amount);
   const plan = market && value > 0 ? planOrder(market, fromCode, value) : null;
   const available = balanceOf(session, fromCode);
+  const toBalance = balanceOf(session, toCode);
   const exceedsBalance = available !== null && value > available;
+  const isError = exceedsBalance && !isConfirmed;
   const receive =
     plan && typeof plan !== "string" ? (toCode === "cNGN" ? plan.cngn : plan.notionalUsdc - plan.feeUsdc) : null;
   // The spot book is quoted in USDC per cNGN; command shows rates as cNGN per USDC.
   const bestPrice = market ? (fromCode === "USDC" ? market.asks[0]?.price : market.bids[0]?.price) : undefined;
   const rate = plan && typeof plan !== "string" ? 1 / plan.expectedPrice : bestPrice ? 1 / bestPrice : null;
+  const valueUsd = fromCode === "USDC" ? value : rate ? value / rate : null;
 
   let disabledReason: string | null = null;
   if (!(value > 0)) disabledReason = "";
   else if (exceedsBalance) disabledReason = "";
   else if (plan === null) disabledReason = isPending ? "Loading the market" : "The market is unavailable";
   else if (typeof plan === "string") disabledReason = plan;
+
+  function changeAmount(next: string) {
+    setAmount(next);
+    reset();
+  }
+
+  function changeFrom(currency: Currency) {
+    setFromCode(currency);
+    reset();
+  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -448,41 +513,104 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
 
   return (
     <form className="mt-5" onSubmit={onSubmit}>
-      <AmountField
-        account={from}
-        amount={amount}
-        onAmountChange={(next) => {
-          setAmount(next);
-          reset();
-        }}
-        caption={exceedsBalance && !isConfirmed ? "Exceeds your available balance" : `Amount in ${from.currency}`}
-        isError={exceedsBalance && !isConfirmed}
-      />
-
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
-        <AccountPicker id="exchange-from" label="From" account={from} session={session} onSelect={setFromCode} />
-        <AccountPicker id="exchange-to" label="To" account={ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1]} session={session} onSelect={(currency) => setFromCode(otherCurrency(currency))} />
-      </div>
-
-      <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
-        <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
-          <p className="min-w-0 font-medium text-[#141414] dark:text-white">
-            Rate <span className="text-[13px] font-normal text-black/60 dark:text-white/60">{rate === null ? (isPending ? "Loading" : "Unavailable") : "cNGN per USDC"}</span>
-          </p>
-          <p className={cn("shrink-0 font-mono text-[20px] font-semibold leading-none", rate === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white")}>
-            {rate === null ? "—" : formatNumber(rate)}
-          </p>
+      <div className={cn(SWAP_PANEL, isError ? SWAP_PANEL_ERROR : SWAP_PANEL_IDLE)}>
+        <div className="flex h-7 items-center justify-between gap-3">
+          <span className={SWAP_LABEL}>You sell</span>
+          <span className="flex items-center gap-2">
+            <span className={cn(SWAP_BALANCE, isError && ERROR_TEXT)}>
+              Balance {available === null ? "—" : formatNumber(available)} {from.currency}
+            </span>
+            {available !== null && available > 0 ? (
+              <button
+                type="button"
+                onClick={() => changeAmount((Math.floor(available * 100) / 100).toFixed(2))}
+                className="h-6 rounded-full bg-white px-2.5 text-[12px] font-semibold text-[#141414] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white"
+              >
+                Max
+              </button>
+            ) : null}
+          </span>
         </div>
-        {plan && typeof plan !== "string" && receive !== null ? (
-          <dl className="mx-[18px] space-y-2 border-t border-black/[0.07] pb-3 pt-3 dark:border-white/10">
-            <RateCardRow label="You get" value={`≈ ${formatMoney(toCode, receive)}`} />
-            <RateCardRow label="Fee" hint={formatPercent(market ? market.takerFeeBps / 10_000 : 0)} value={formatMoney("USDC", plan.feeUsdc)} />
-          </dl>
-        ) : null}
+        <div className="mt-3 flex items-center gap-3">
+          <input
+            autoFocus
+            aria-label={`Amount to sell in ${from.currency}`}
+            inputMode="decimal"
+            placeholder="0"
+            value={amount}
+            onChange={(event) => {
+              if (/^\d*\.?\d{0,2}$/.test(event.target.value)) changeAmount(event.target.value);
+            }}
+            className="min-w-0 flex-1 bg-transparent font-mono text-[44px] font-semibold leading-none tracking-[-0.02em] text-[#141414] outline-none placeholder:text-black/25 dark:text-white dark:placeholder:text-white/30"
+          />
+          <TokenPicker label="Sell" account={from} onSelect={changeFrom} />
+        </div>
+        <div className="mt-3 flex h-5 items-center justify-between gap-3 text-[13px]">
+          <span className="font-mono text-black/60 dark:text-white/60">
+            {value > 0 && valueUsd !== null ? `≈ ${formatMoney("USDC", valueUsd)}` : ""}
+          </span>
+          <span aria-live="polite" className={cn("font-medium", ERROR_TEXT)}>
+            {isError ? "Exceeds balance" : ""}
+          </span>
+        </div>
       </div>
+
+      <div className="relative z-10 flex h-2 justify-center">
+        <button
+          type="button"
+          aria-label="Swap sell and buy"
+          onClick={() => changeFrom(toCode)}
+          className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#EFE7DC] text-[#141414] ring-4 ring-[#FDFBF7] outline-none transition-colors hover:bg-[#E5DDD0] focus-visible:ring-black/20 dark:bg-[#2A2A2A] dark:text-white dark:ring-[#1A1A1A] dark:hover:bg-[#333]"
+        >
+          <ArrowUpDown className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className={cn(SWAP_PANEL, SWAP_PANEL_IDLE, "pb-6")}>
+        <div className="flex h-7 items-center justify-between gap-3">
+          <span className={SWAP_LABEL}>You buy</span>
+          <span className={SWAP_BALANCE}>
+            Balance {toBalance === null ? "—" : formatNumber(toBalance)} {to.currency}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <p
+            aria-label={`Amount to buy in ${to.currency}`}
+            className={cn(
+              "min-w-0 flex-1 truncate font-mono text-[26px] font-semibold leading-none",
+              receive === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
+            )}
+          >
+            {receive === null ? "0" : formatNumber(receive)}
+          </p>
+          <TokenPicker label="Buy" account={to} onSelect={(currency) => changeFrom(otherCurrency(currency))} />
+        </div>
+      </div>
+
+      <dl className="mt-5 space-y-2.5 px-5 text-[14px]">
+        <SwapDetailRow label="Rate" value={rate === null ? (isPending ? "Loading" : "Unavailable") : `1 USDC = ${formatNumber(rate)} cNGN`} />
+        <SwapDetailRow
+          label="Fee"
+          value={
+            plan && typeof plan !== "string"
+              ? `${formatMoney("USDC", plan.feeUsdc)} (${formatPercent(market ? market.takerFeeBps / 10_000 : 0)})`
+              : market
+                ? formatPercent(market.takerFeeBps / 10_000)
+                : "—"
+          }
+        />
+        <SwapDetailRow label="You receive" value={receive === null ? "—" : `${formatNumber(receive)} ${to.currency}`} strong />
+      </dl>
 
       <div className="mt-5">
-        <TradeAction session={session} label="Exchange" disabledReason={disabledReason} isSubmitting={isSubmitting} isConfirmed={isConfirmed} status={status} />
+        <TradeAction
+          session={session}
+          label={isError ? `Insufficient ${from.currency} balance` : "Exchange"}
+          disabledReason={disabledReason}
+          isSubmitting={isSubmitting}
+          isConfirmed={isConfirmed}
+          status={status}
+        />
       </div>
     </form>
   );
