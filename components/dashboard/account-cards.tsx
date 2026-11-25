@@ -4,8 +4,8 @@ import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
 import { accountHoldings, WithTradeSession } from "@/components/dashboard/trade-session";
 
 export const ACCOUNTS = [
-  { iconSrc: "/tokens/usdc.svg", flagSrc: "/tokens/us.svg", currency: "USDC", fiat: "USD", symbol: "$", balance: "0.00" },
-  { iconSrc: "/tokens/cngn.png", flagSrc: "/tokens/ng.svg", currency: "cNGN", fiat: "NGN", symbol: "₦", balance: "0.00" },
+  { iconSrc: "/tokens/usdc.svg", flagSrc: "/flags/us.svg", currency: "USDC", fiat: "USD", symbol: "$", balance: "0.00" },
+  { iconSrc: "/tokens/cngn.png", flagSrc: "/flags/ng.svg", currency: "cNGN", fiat: "NGN", symbol: "₦", balance: "0.00" },
 ];
 
 const formatBalance = (value: number) =>
