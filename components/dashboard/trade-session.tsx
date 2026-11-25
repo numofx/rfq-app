@@ -222,6 +222,7 @@ export function TradeAction({
   isConfirmed = false,
   submittingLabel = "Placing order",
   status,
+  note,
 }: {
   session: TradeSession | null;
   label: string;
@@ -233,6 +234,8 @@ export function TradeAction({
   disabledReason: string | null;
   isSubmitting: boolean;
   status: { tone: "neutral" | "error"; text: string } | null;
+  /** Shown under the button when there is no outcome or reason to report. */
+  note?: ReactNode;
 }) {
   if (session === null) {
     return (
@@ -302,7 +305,7 @@ export function TradeAction({
         aria-live="polite"
         className={cn(NOTE, "min-h-5", status?.tone === "error" && "text-[#B4412F] dark:text-[#E98A7A]")}
       >
-        {isConfirmed ? "" : (status?.text ?? disabledReason ?? "")}
+        {isConfirmed ? "" : (status?.text ?? (disabledReason || note) ?? "")}
       </p>
     </>
   );

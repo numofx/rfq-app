@@ -6,7 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
@@ -488,13 +488,63 @@ function TokenPicker({ label, account, onSelect }: { label: string; account: Acc
   );
 }
 
-function SwapDetailRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+function SwapDetailRow({
+  label,
+  value,
+  strong = false,
+  hint,
+  skeletonWidth,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  /** Explains the row, behind an info icon next to its label. */
+  hint?: string;
+  /** Set while the value loads: a placeholder bar this wide stands in for it. */
+  skeletonWidth?: number;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className={strong ? "font-semibold text-[#141414] dark:text-white" : "text-black/70 dark:text-white/70"}>{label}</dt>
-      <dd className={cn("text-right font-mono text-[#141414] dark:text-white", strong && "font-semibold")}>{value}</dd>
+    <div className="flex h-5 items-center justify-between gap-4">
+      <dt className={cn("flex items-center gap-1.5", strong ? "font-semibold text-[#141414] dark:text-white" : "text-black/70 dark:text-white/70")}>
+        {label}
+        {hint ? (
+          <span title={hint} aria-label={hint} role="img" className="inline-flex text-black/45 dark:text-white/45">
+            <Info className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+          </span>
+        ) : null}
+      </dt>
+      {skeletonWidth ? (
+        <dd aria-label="Loading" className={SKELETON} style={{ width: skeletonWidth }} />
+      ) : (
+        <dd className={cn("text-right font-mono text-[#141414] dark:text-white", strong && "font-semibold")}>{value}</dd>
+      )}
     </div>
   );
+}
+
+const SKELETON = "h-4 animate-pulse rounded-md bg-black/[0.07] dark:bg-white/10";
+const SWAP_PANEL_WARNING = "bg-[#FBF2E2] ring-1 ring-inset ring-[#E8C88C] dark:bg-[#E8C88C]/10 dark:ring-[#E8C88C]/40";
+const WARNING_TEXT = "text-[#8A5A12] dark:text-[#E8C88C]";
+
+/** Amounts as the mockup writes them: up to two decimals, no trailing zeros. */
+const formatAmount = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+/** The bought amount shrinks as it grows, so the token pill keeps its room. */
+function buyAmountSize(text: string) {
+  if (text.length <= 9) return "text-[44px]";
+  if (text.length <= 11) return "text-[36px]";
+  return "text-[30px]";
+}
+
+/** Seconds until react-query refetches the price, ticking down once a second. */
+function useRefreshCountdown(updatedAt: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  if (!updatedAt) return null;
+  return Math.max(0, Math.ceil((updatedAt + PRICE_POLL_MS - now) / 1000));
 }
 
 /** Sells this much to read the rate before an amount is entered: about $100 either way. */
@@ -516,7 +566,7 @@ function useExchangePrice(sell: Currency, value: number) {
   }, [value]);
   const sellValue = debounced > 0 ? debounced : REFERENCE_SELL[sell];
   const sellUnits = toUnits(sell, sellValue);
-  const { data, error, isPending } = useQuery({
+  const { data, dataUpdatedAt, error, isPending } = useQuery({
     queryKey: ["zeroex-price", sell, sellUnits.toString()],
     queryFn: ({ signal }) => fetchZeroExQuote({ sell, sellUnits, signal }),
     refetchInterval: PRICE_POLL_MS,
@@ -528,6 +578,7 @@ function useExchangePrice(sell: Currency, value: number) {
     /** Whether `price` is for the amount entered, rather than the reference amount or a stale one. */
     isForAmount: price !== null && debounced > 0 && debounced === value,
     isPending: isPending || debounced !== value,
+    updatedAt: dataUpdatedAt,
     error: data && !data.liquidityAvailable ? "Not enough liquidity for this amount" : error ? error.message : null,
   };
 }
@@ -581,7 +632,8 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
   const to = ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1];
 
   const value = Number(amount);
-  const { price, isForAmount, isPending, error: priceError } = useExchangePrice(fromCode, value);
+  const { price, isForAmount, isPending, updatedAt, error: priceError } = useExchangePrice(fromCode, value);
+  const refreshIn = useRefreshCountdown(updatedAt);
   const available = balanceOf(session, fromCode);
   const toBalance = balanceOf(session, toCode);
   const exceedsBalance = available !== null && value > available;
@@ -605,14 +657,20 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
         }`
       : "—";
   const belowMinimum = minReceive !== null && minReceive < MIN_DEPOSIT[toCode];
+  // The sell that clears the venue's deposit minimum even at full slippage, which is what the exchange checks
+  // before swapping (lib/venue/exchange.ts), rounded up to the cent.
+  const minimumSell =
+    belowMinimum && minReceive !== null && minReceive > 0 ? Math.ceil(((MIN_DEPOSIT[toCode] * value) / minReceive) * 100) / 100 : null;
+  // An amount is entered and its rate is on the way: placeholders, not the reference rate.
+  const isLoadingAmount = value > 0 && !exceedsBalance && !isForAmount && priceError === null && resume === null;
 
   let disabledReason: string | null = null;
   if (resume !== null) disabledReason = null;
   else if (!(value > 0)) disabledReason = "";
   else if (exceedsBalance) disabledReason = "";
   else if (priceError) disabledReason = priceError;
-  else if (!isForAmount) disabledReason = isPending ? "Getting a rate" : "The rate is unavailable";
-  else if (belowMinimum) disabledReason = `The smallest exchange pays out ${formatNumber(MIN_DEPOSIT[toCode])} ${to.fiat}`;
+  else if (!isForAmount) disabledReason = isPending ? "" : "The rate is unavailable";
+  else if (belowMinimum) disabledReason = "";
 
   function clearOutcome() {
     setStatus(null);
@@ -667,7 +725,10 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
     void run({ stage: "withdraw", sell: fromCode, sellUnits: toUnits(fromCode, value) });
   }
 
-  let label = isError ? `Insufficient ${from.fiat} balance` : "Exchange";
+  let label = value > 0 ? `Exchange ${formatAmount(value)} ${from.fiat}` : "Exchange";
+  if (isError) label = `Insufficient ${from.fiat} balance`;
+  else if (isLoadingAmount) label = "Getting best rate…";
+  else if (belowMinimum) label = minimumSell === null ? "Below the minimum" : `Minimum ${formatAmount(minimumSell)} ${from.fiat}`;
   if (resume?.stage === "swap") label = "Try the exchange again";
   else if (resume?.stage === "deposit") label = `Deposit the ${FIAT[resume.currency]} back`;
 
@@ -708,7 +769,7 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
         </div>
         <div className="mt-3 flex h-5 items-center justify-between gap-3 text-[13px]">
           <span className="font-mono text-black/60 dark:text-white/60">
-            {value > 0 && valueUsd !== null ? `≈ ${formatMoney("USDC", valueUsd)}` : ""}
+            {fromCode === "cNGN" && value > 0 && valueUsd !== null ? `≈ ${formatMoney("USDC", valueUsd)}` : ""}
           </span>
           <span aria-live="polite" className={cn("font-medium", ERROR_TEXT)}>
             {isError ? "Exceeds balance" : ""}
@@ -727,36 +788,67 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
         </button>
       </div>
 
-      <div className={cn(SWAP_PANEL, SWAP_PANEL_IDLE, "pb-6")}>
+      <div className={cn(SWAP_PANEL, belowMinimum ? SWAP_PANEL_WARNING : SWAP_PANEL_IDLE, belowMinimum ? "pb-4" : "pb-6")}>
         <div className="flex h-7 items-center justify-between gap-3">
           <span className={SWAP_LABEL}>You buy</span>
           <span className={SWAP_BALANCE}>
             Balance {toBalance === null ? "—" : formatNumber(toBalance)} {to.fiat}
           </span>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <p
-            aria-label={`Amount to buy in ${to.fiat}`}
-            className={cn(
-              "min-w-0 flex-1 truncate font-mono text-[26px] font-semibold leading-none",
-              receive === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
-            )}
-          >
-            {receive === null ? "0" : formatNumber(receive)}
-          </p>
+        <div className="mt-3 flex h-12 items-center gap-3">
+          {isLoadingAmount ? (
+            <div aria-label={`Amount to buy in ${to.fiat}: loading`} className="min-w-0 flex-1">
+              <div className={cn(SKELETON, "h-10 w-[70%] max-w-[190px] rounded-lg")} />
+            </div>
+          ) : (
+            <p
+              aria-label={`Amount to buy in ${to.fiat}`}
+              className={cn(
+                "min-w-0 flex-1 truncate font-mono font-semibold leading-none tracking-[-0.02em]",
+                buyAmountSize(receive === null ? "0" : formatNumber(receive)),
+                receive === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
+              )}
+            >
+              {receive === null ? "0" : formatNumber(receive)}
+            </p>
+          )}
           <TokenPicker label="Buy" account={to} onSelect={(currency) => changeFrom(otherCurrency(currency))} />
         </div>
+        {belowMinimum ? (
+          <p aria-live="polite" className={cn("mt-3 flex items-center gap-1.5 text-[13px]", WARNING_TEXT)}>
+            <Info className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span>
+              Minimum is {formatNumber(MIN_DEPOSIT[toCode])} {to.fiat}
+              {minimumSell !== null ? (
+                <>
+                  {" · "}
+                  <button
+                    type="button"
+                    onClick={() => changeAmount(minimumSell.toFixed(2))}
+                    className="font-semibold underline underline-offset-2 outline-none hover:opacity-75 focus-visible:ring-2 focus-visible:ring-black/15"
+                  >
+                    Sell {formatAmount(minimumSell)} {from.fiat}
+                  </button>
+                </>
+              ) : null}
+            </span>
+          </p>
+        ) : null}
       </div>
 
       <dl className="mt-5 space-y-2.5 px-5 text-[14px]">
-        <SwapDetailRow label="Rate" value={rate === null ? (priceError ? "Unavailable" : "Loading") : `1 USD = ${formatNumber(rate)} NGN`} />
-        <SwapDetailRow label="Fee" value={feeText} />
         <SwapDetailRow
-          label="You receive"
-          value={receive === null ? "—" : `${formatNumber(receive)} ${to.fiat}`}
-          strong
+          label="Rate"
+          value={rate === null ? (priceError ? "Unavailable" : "—") : `1 USD = ${formatNumber(rate)} NGN`}
+          skeletonWidth={isLoadingAmount || (rate === null && priceError === null) ? 142 : undefined}
         />
-        {minReceive !== null ? <SwapDetailRow label="At least" value={`${formatNumber(minReceive)} ${to.fiat}`} /> : null}
+        <SwapDetailRow label="Fee" value={feeText} skeletonWidth={isLoadingAmount ? 104 : undefined} />
+        <SwapDetailRow
+          label="Minimum received"
+          hint="The least the exchange can pay out after slippage. It reverts rather than pay less."
+          value={minReceive === null ? "—" : `${formatNumber(minReceive)} ${to.fiat}`}
+          skeletonWidth={isLoadingAmount ? 112 : undefined}
+        />
       </dl>
 
       <div className="mt-5">
@@ -768,6 +860,11 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
           isSubmitting={isSubmitting}
           isConfirmed={isConfirmed}
           status={status}
+          note={
+            isForAmount && !belowMinimum && !isError && resume === null && !isSubmitting && refreshIn !== null ? (
+              <span className="font-mono text-[12px]">Quote refreshes in 0:{String(refreshIn).padStart(2, "0")}</span>
+            ) : undefined
+          }
         />
         {resume?.stage === "swap" && !isSubmitting ? (
           <button
