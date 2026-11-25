@@ -420,34 +420,66 @@ const SWAP_PANEL_ERROR = "bg-[#FBEBE7] dark:bg-[#E98A7A]/10";
 const SWAP_LABEL = "text-[14px] text-black/70 dark:text-white/70";
 const SWAP_BALANCE = "font-mono text-[12px] text-black/60 dark:text-white/60";
 
-/** The white token pill on a swap panel, with a menu of the accounts. */
+/** The fiat currency's glyph on a green coin, badged with the token that holds it on chain. */
+function CurrencyIcon({ account, size }: { account: Account; size: number }) {
+  // Proportions from the token tile design: a 66px coin carries a 30px rounded-square badge
+  // that overhangs its bottom-right edge by about 4px, with the token logo inset inside it.
+  const badge = Math.round(size * 0.46);
+  const logo = Math.round(badge * 0.72);
+  const overhang = Math.round(size * 0.06);
+  return (
+    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
+      <span
+        className="flex h-full w-full items-center justify-center rounded-full bg-[#1E8E4E] font-extrabold leading-none text-white"
+        style={{ fontSize: Math.round(size * 0.62) }}
+      >
+        {account.symbol}
+      </span>
+      <span
+        className="absolute flex items-center justify-center rounded-[30%] bg-[#F1F2F4] ring-[1.5px] ring-white dark:bg-[#3A3A3A] dark:ring-[#2A2A2A]"
+        style={{ width: badge, height: badge, right: -overhang, bottom: -overhang }}
+      >
+        <Image
+          src={account.iconSrc}
+          alt=""
+          width={logo}
+          height={logo}
+          className="rounded-full object-cover"
+          style={{ width: logo, height: logo }}
+        />
+      </span>
+    </span>
+  );
+}
+
+/** The white currency pill on a swap panel, with a menu of the accounts. */
 function TokenPicker({ label, account, onSelect }: { label: string; account: Account; onSelect: (currency: Currency) => void }) {
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          aria-label={`${label}: ${account.currency}`}
+          aria-label={`${label}: ${account.fiat}`}
           className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-white pl-1.5 pr-3 text-[15px] font-semibold text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:focus-visible:ring-white/20"
         >
-          <Image src={account.iconSrc} alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-full object-cover" />
-          {account.currency}
+          <CurrencyIcon account={account} size={30} />
+          {account.fiat}
           <ChevronDown className="h-4 w-4 text-black/60 dark:text-white/60" aria-hidden="true" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={6} className={cn(MENU_CONTENT, "min-w-[180px]")}>
-          {ACCOUNTS.map(({ iconSrc, currency }) => (
+          {ACCOUNTS.map((option) => (
             <DropdownMenu.Item
-              key={currency}
-              onSelect={() => onSelect(currency as Currency)}
+              key={option.currency}
+              onSelect={() => onSelect(option.currency as Currency)}
               className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
             >
               <span className="flex items-center gap-2.5 font-medium">
-                <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
-                {currency}
+                <CurrencyIcon account={option} size={22} />
+                {option.fiat}
               </span>
-              {currency === account.currency ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+              {option.currency === account.currency ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
             </DropdownMenu.Item>
           ))}
         </DropdownMenu.Content>
@@ -518,7 +550,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
           <span className={SWAP_LABEL}>You sell</span>
           <span className="flex items-center gap-2">
             <span className={cn(SWAP_BALANCE, isError && ERROR_TEXT)}>
-              Balance {available === null ? "—" : formatNumber(available)} {from.currency}
+              Balance {available === null ? "—" : formatNumber(available)} {from.fiat}
             </span>
             {available !== null && available > 0 ? (
               <button
@@ -534,7 +566,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
         <div className="mt-3 flex items-center gap-3">
           <input
             autoFocus
-            aria-label={`Amount to sell in ${from.currency}`}
+            aria-label={`Amount to sell in ${from.fiat}`}
             inputMode="decimal"
             placeholder="0"
             value={amount}
@@ -570,12 +602,12 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
         <div className="flex h-7 items-center justify-between gap-3">
           <span className={SWAP_LABEL}>You buy</span>
           <span className={SWAP_BALANCE}>
-            Balance {toBalance === null ? "—" : formatNumber(toBalance)} {to.currency}
+            Balance {toBalance === null ? "—" : formatNumber(toBalance)} {to.fiat}
           </span>
         </div>
         <div className="mt-3 flex items-center gap-3">
           <p
-            aria-label={`Amount to buy in ${to.currency}`}
+            aria-label={`Amount to buy in ${to.fiat}`}
             className={cn(
               "min-w-0 flex-1 truncate font-mono text-[26px] font-semibold leading-none",
               receive === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
@@ -588,7 +620,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
       </div>
 
       <dl className="mt-5 space-y-2.5 px-5 text-[14px]">
-        <SwapDetailRow label="Rate" value={rate === null ? (isPending ? "Loading" : "Unavailable") : `1 USDC = ${formatNumber(rate)} cNGN`} />
+        <SwapDetailRow label="Rate" value={rate === null ? (isPending ? "Loading" : "Unavailable") : `1 USD = ${formatNumber(rate)} NGN`} />
         <SwapDetailRow
           label="Fee"
           value={
@@ -599,13 +631,13 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
                 : "—"
           }
         />
-        <SwapDetailRow label="You receive" value={receive === null ? "—" : `${formatNumber(receive)} ${to.currency}`} strong />
+        <SwapDetailRow label="You receive" value={receive === null ? "—" : `${formatNumber(receive)} ${to.fiat}`} strong />
       </dl>
 
       <div className="mt-5">
         <TradeAction
           session={session}
-          label={isError ? `Insufficient ${from.currency} balance` : "Exchange"}
+          label={isError ? `Insufficient ${from.fiat} balance` : "Exchange"}
           disabledReason={disabledReason}
           isSubmitting={isSubmitting}
           isConfirmed={isConfirmed}
