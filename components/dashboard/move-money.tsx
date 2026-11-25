@@ -20,7 +20,9 @@ import { createBasePublicClient, getAppChain } from "@/lib/venue/config";
 import { recipientProblem, usdcTransfer, waitForTransfer } from "@/lib/venue/send";
 import { FUTURE_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { ExchangeStopped, MIN_DEPOSIT, runExchange, type ExchangeResume, type SendCall } from "@/lib/venue/exchange";
+import { loadResume, resumeHolding, saveResume } from "@/lib/venue/exchange-resume";
 import { EXCHANGE_TOKENS, fetchZeroExQuote } from "@/lib/zeroex";
+import { useWalletTokens } from "@/lib/hooks/useWalletTokens";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
@@ -527,6 +529,8 @@ function SwapDetailRow({
 const SKELETON = "h-4 animate-pulse rounded-md bg-black/[0.07] dark:bg-white/10";
 const SWAP_PANEL_WARNING = "bg-[#FBF2E2] ring-1 ring-inset ring-[#E8C88C] dark:bg-[#E8C88C]/10 dark:ring-[#E8C88C]/40";
 const WARNING_TEXT = "text-[#8A5A12] dark:text-[#E8C88C]";
+const STRAY_BUTTON =
+  "h-8 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white";
 
 /** Amounts as the mockup writes them: up to two decimals, no trailing zeros. */
 const formatAmount = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -646,6 +650,9 @@ function useSendCall(wallet: TradeSession["wallet"]): SendCall {
   };
 }
 
+/** Wallet balances below these are dust, not worth offering to move: about $1 either way. */
+const WALLET_DUST: Record<Currency, bigint> = { USDC: 1_000_000n, cNGN: 1_500_000_000n };
+
 /**
  * Exchanges between the trading account's balances at 0x's rate, the same routing swap.numofx.com uses. 0x
  * swaps wallet tokens, so the exchange withdraws to the wallet, swaps, and deposits the proceeds back
@@ -674,6 +681,40 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
   const from = ACCOUNTS.find(({ currency }) => currency === fromCode) ?? ACCOUNTS[0];
   const toCode = otherCurrency(fromCode);
   const to = ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1];
+
+  const walletAddress = session?.wallet?.address ?? null;
+  const walletTokens = useWalletTokens(walletAddress);
+
+  // A stopped exchange saved by an earlier visit: restore it once, if the wallet still holds its money.
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (walletAddress === null || walletTokens === null || restoredFor === walletAddress) return;
+    setRestoredFor(walletAddress);
+    const saved = loadResume(walletAddress);
+    if (saved === null) return;
+    const holding = resumeHolding(saved);
+    if (walletTokens[holding.currency] < holding.units) {
+      saveResume(walletAddress, null); // spent or moved elsewhere since: nothing to pick up
+      return;
+    }
+    setResume(saved);
+    if (saved.stage === "swap") {
+      setFromCode(saved.sell);
+      setAmount(fromUnits(saved.sell, saved.sellUnits).toFixed(2));
+    } else {
+      setFromCode(otherCurrency(saved.currency));
+    }
+    setStatus({
+      tone: "neutral",
+      text: `An earlier exchange stopped with ${formatNumber(fromUnits(holding.currency, holding.units))} ${FIAT[holding.currency]} in your wallet.`,
+    });
+  }, [walletAddress, walletTokens, restoredFor]);
+
+  // Money in the wallet that no saved exchange accounts for: offered to exchange or deposit.
+  const strayFunds =
+    resume === null && !isSubmitting && walletTokens !== null && restoredFor === walletAddress
+      ? (["USDC", "cNGN"] as const).filter((currency) => walletTokens[currency] >= WALLET_DUST[currency])
+      : [];
 
   const value = Number(amount);
   const { price, isForAmount, isPending, updatedAt, error: priceError } = useExchangePrice(fromCode, value);
@@ -743,11 +784,15 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
         start
       );
       setResume(null);
+      saveResume(session.wallet.address, null);
       setAmount("");
       setIsConfirmed(true);
       setStatus({ tone: "neutral", text: `Added ${formatNumber(fromUnits(done.currency, done.units))} ${FIAT[done.currency]} to your account.` });
     } catch (error) {
-      if (error instanceof ExchangeStopped) setResume(error.resume);
+      if (error instanceof ExchangeStopped) {
+        setResume(error.resume);
+        saveResume(session.wallet.address, error.resume);
+      }
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "The exchange failed." });
     } finally {
       setIsSubmitting(false);
@@ -755,6 +800,20 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
       session.refreshBalances();
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-tokens"] });
+    }
+  }
+
+  /** Picks up money already in the wallet: exchanges it for the other currency, or deposits it as it is. */
+  function moveStray(currency: Currency, action: "exchange" | "deposit") {
+    if (walletTokens === null) return;
+    const units = walletTokens[currency];
+    if (action === "exchange") {
+      setFromCode(currency);
+      setAmount(fromUnits(currency, units).toFixed(2));
+      void run({ stage: "swap", sell: currency, sellUnits: units });
+    } else {
+      void run({ stage: "deposit", currency, units });
     }
   }
 
@@ -778,6 +837,42 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
 
   return (
     <form className="mt-5" onSubmit={onSubmit}>
+      {strayFunds.length > 0 && walletTokens !== null ? (
+        <div className={cn("mb-3 space-y-2.5 rounded-2xl px-5 py-4 text-[13px]", SWAP_PANEL_WARNING)}>
+          {strayFunds.map((currency) => {
+            const held = fromUnits(currency, walletTokens[currency]);
+            const canDeposit = held >= MIN_DEPOSIT[currency];
+            return (
+              <div key={currency}>
+                <p className={cn("flex items-start gap-1.5", WARNING_TEXT)}>
+                  <Info className="mt-[2px] h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    <span className="font-mono font-semibold">
+                      {formatNumber(held)} {FIAT[currency]}
+                    </span>{" "}
+                    is in your wallet, outside your account.
+                  </span>
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 pl-5">
+                  <button type="button" onClick={() => moveStray(currency, "exchange")} className={STRAY_BUTTON}>
+                    Exchange it for {FIAT[otherCurrency(currency)]}
+                  </button>
+                  {canDeposit ? (
+                    <button type="button" onClick={() => moveStray(currency, "deposit")} className={STRAY_BUTTON}>
+                      Deposit it to your account
+                    </button>
+                  ) : (
+                    <span className={cn("self-center", WARNING_TEXT)}>
+                      Deposits start at {formatNumber(MIN_DEPOSIT[currency])} {FIAT[currency]}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div className={cn(SWAP_PANEL, isError ? SWAP_PANEL_ERROR : SWAP_PANEL_IDLE)}>
         <div className="flex h-7 items-center justify-between gap-3">
           <span className={SWAP_LABEL}>You sell</span>
