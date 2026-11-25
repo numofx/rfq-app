@@ -420,7 +420,7 @@ const SWAP_PANEL_ERROR = "bg-[#FBEBE7] dark:bg-[#E98A7A]/10";
 const SWAP_LABEL = "text-[14px] text-black/70 dark:text-white/70";
 const SWAP_BALANCE = "font-mono text-[12px] text-black/60 dark:text-white/60";
 
-/** The fiat currency's glyph on a green coin, badged with the token that holds it on chain. */
+/** The fiat currency's flag, badged with the token that holds it on chain. */
 function CurrencyIcon({ account, size }: { account: Account; size: number }) {
   // Proportions from the token tile design: a 66px coin carries a 30px rounded-square badge
   // that overhangs its bottom-right edge by about 4px, with the token logo inset inside it.
@@ -429,12 +429,13 @@ function CurrencyIcon({ account, size }: { account: Account; size: number }) {
   const overhang = Math.round(size * 0.06);
   return (
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
-      <span
-        className="flex h-full w-full items-center justify-center rounded-full bg-[#1E8E4E] font-extrabold leading-none text-white"
-        style={{ fontSize: Math.round(size * 0.62) }}
-      >
-        {account.symbol}
-      </span>
+      <Image
+        src={account.flagSrc}
+        alt=""
+        width={size}
+        height={size}
+        className="h-full w-full rounded-full object-cover ring-1 ring-black/5"
+      />
       <span
         className="absolute flex items-center justify-center rounded-[30%] bg-[#F1F2F4] ring-[1.5px] ring-white dark:bg-[#3A3A3A] dark:ring-[#2A2A2A]"
         style={{ width: badge, height: badge, right: -overhang, bottom: -overhang }}
