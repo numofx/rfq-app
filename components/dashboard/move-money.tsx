@@ -1508,14 +1508,28 @@ function SendFormReady({ session }: { session: TradeSession }) {
   );
 }
 
-function TradeDialog({ title, open, onOpenChange, children }: { title: string; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
+function TradeDialog({
+  title,
+  open,
+  onOpenChange,
+  wide = false,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Room for large amounts beside a token pill: the Exchange dialog. */
+  wide?: boolean;
+  children: ReactNode;
+}) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-md" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
+          style={{ maxWidth: wide ? 580 : 480 }}
+          className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[32px] bg-[#EDE5DA] p-3 outline-none dark:bg-[#242424]"
         >
           <div className="relative overflow-y-auto overscroll-y-contain rounded-[24px] bg-[#FDFBF7] px-5 pb-7 pt-6 dark:bg-[#1A1A1A] sm:px-8">
             <Dialog.Title className="text-center text-[17px] font-semibold tracking-[-0.01em] text-[#141414] dark:text-white">
@@ -1608,7 +1622,7 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
       <TradeDialog title="Lock rate" open={dialog === "lock-rate"} onOpenChange={closeUnless("lock-rate")}>
         <WithTradeSession>{(session) => <LockRateForm session={session} />}</WithTradeSession>
       </TradeDialog>
-      <TradeDialog title="Exchange" open={dialog === "exchange"} onOpenChange={closeUnless("exchange")}>
+      <TradeDialog title="Exchange" wide open={dialog === "exchange"} onOpenChange={closeUnless("exchange")}>
         <WithTradeSession>{(session) => <ExchangeForm session={session} />}</WithTradeSession>
       </TradeDialog>
       <TradeDialog title="Deposit" open={dialog === "deposit"} onOpenChange={closeUnless("deposit")}>
