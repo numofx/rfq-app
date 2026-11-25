@@ -77,8 +77,10 @@ async function sendAndConfirm(context: Context, call: Parameters<SendCall>[0], s
   try {
     hash = await context.sendCall(call);
   } catch (error) {
+    // The full error goes to the console; the dialog quotes the wallet's own reason rather than a guess at it.
+    console.error("[exchange] the wallet did not send", call.to, error);
     const message = errorText(error);
-    throw stopped(/sponsor/i.test(message) ? "Gas sponsorship isn't available for this wallet right now" : message || "The wallet didn't send the transaction");
+    throw stopped(message ? `The wallet didn't send it: ${message.replace(/\.$/, "")}` : "The wallet didn't send the transaction");
   }
   const receipt = await waitForReceipt(hash);
   if (receipt === null) throw stopped("The transaction wasn't confirmed in time");

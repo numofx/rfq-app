@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
@@ -16,7 +16,7 @@ import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
 import { TOKEN_DECIMALS, withdraw } from "@/lib/venue/withdraw";
 import { createWalletClient, custom, formatUnits, parseUnits } from "viem";
 import { useSendTransaction } from "@privy-io/react-auth";
-import { getAppChain } from "@/lib/venue/config";
+import { createBasePublicClient, getAppChain } from "@/lib/venue/config";
 import { recipientProblem, usdcTransfer, waitForTransfer } from "@/lib/venue/send";
 import { FUTURE_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { ExchangeStopped, MIN_DEPOSIT, runExchange, type ExchangeResume, type SendCall } from "@/lib/venue/exchange";
@@ -505,7 +505,7 @@ function SwapDetailRow({
 }) {
   return (
     <div className="flex h-5 items-center justify-between gap-4">
-      <dt className={cn("flex items-center gap-1.5", strong ? "font-semibold text-[#141414] dark:text-white" : "text-black/70 dark:text-white/70")}>
+      <dt className={cn("flex shrink-0 items-center gap-1.5 whitespace-nowrap", strong ? "font-semibold text-[#141414] dark:text-white" : "text-black/70 dark:text-white/70")}>
         {label}
         {hint ? (
           <span title={hint} aria-label={hint} role="img" className="inline-flex text-black/45 dark:text-white/45">
@@ -516,7 +516,9 @@ function SwapDetailRow({
       {skeletonWidth ? (
         <dd aria-label="Loading" className={SKELETON} style={{ width: skeletonWidth }} />
       ) : (
-        <dd className={cn("text-right font-mono text-[#141414] dark:text-white", strong && "font-semibold")}>{value}</dd>
+        <dd className={cn("min-w-0 truncate text-right font-mono text-[#141414] dark:text-white", strong && "font-semibold")} title={value}>
+          {value}
+        </dd>
       )}
     </div>
   );
@@ -529,11 +531,39 @@ const WARNING_TEXT = "text-[#8A5A12] dark:text-[#E8C88C]";
 /** Amounts as the mockup writes them: up to two decimals, no trailing zeros. */
 const formatAmount = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-/** The bought amount shrinks as it grows, so the token pill keeps its room. */
-function buyAmountSize(text: string) {
-  if (text.length <= 9) return "text-[44px]";
-  if (text.length <= 11) return "text-[36px]";
-  return "text-[30px]";
+/** The sizes the bought amount steps down through, largest first. */
+const BUY_AMOUNT_SIZES = [44, 38, 32, 28, 24, 20, 17, 14];
+
+/**
+ * The bought amount at the largest size that fits beside the token pill, measured rather than guessed from
+ * its length: the font and the pill's width vary by platform, so a character count cuts it off on some.
+ */
+function FitAmount({ text, className, label }: { text: string; className: string; label: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [size, setSize] = useState(BUY_AMOUNT_SIZES[0]);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const fit = () => {
+      for (const candidate of BUY_AMOUNT_SIZES) {
+        element.style.fontSize = `${candidate}px`;
+        if (element.scrollWidth <= element.clientWidth) {
+          setSize(candidate);
+          return;
+        }
+      }
+      setSize(BUY_AMOUNT_SIZES[BUY_AMOUNT_SIZES.length - 1]);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text]);
+  return (
+    <p ref={ref} aria-label={label} className={className} style={{ fontSize: size }}>
+      {text}
+    </p>
+  );
 }
 
 /** Seconds until react-query refetches the price, ticking down once a second. */
@@ -583,16 +613,30 @@ function useExchangePrice(sell: Currency, value: number) {
   };
 }
 
-/** Sends a wallet transaction: sponsored through Privy for the embedded wallet, which holds no ETH; a browser wallet pays its own. */
+/** Gas assumed for a call that names none (an approval is ~50k): only sizes the self-pay check. */
+const DEFAULT_GAS_FOR_CHECK = 300_000n;
+
+/**
+ * Sends a wallet transaction. The embedded wallet pays its own gas when it holds enough ETH, and only otherwise
+ * asks Privy to sponsor it: Privy's sponsored request carries no gas limit, so 0x's limit (which the cNGN route
+ * needs, see lib/venue/exchange.ts) is kept only when the wallet pays. A browser wallet always pays its own.
+ */
 function useSendCall(wallet: TradeSession["wallet"]): SendCall {
   const { sendTransaction } = useSendTransaction();
   return async ({ gas, ...call }) => {
     if (!wallet) throw new Error("No wallet");
     const chain = getAppChain();
     if (wallet.walletClientType === "privy") {
+      const client = createBasePublicClient();
+      const [balance, fees] = await Promise.all([
+        client.getBalance({ address: wallet.address as `0x${string}` }),
+        client.estimateFeesPerGas().catch(() => null),
+      ]);
+      const perGas = fees?.maxFeePerGas ?? fees?.gasPrice ?? null;
+      const canPay = perGas !== null && balance >= (gas ?? DEFAULT_GAS_FOR_CHECK) * perGas * 2n;
       const { hash } = await sendTransaction(
         { ...call, chainId: chain.id, ...(gas === undefined ? {} : { gasLimit: gas }) },
-        { sponsor: true, address: wallet.address, uiOptions: { showWalletUIs: false } }
+        { ...(canPay ? {} : { sponsor: true }), address: wallet.address, uiOptions: { showWalletUIs: false } }
       );
       return hash;
     }
@@ -801,16 +845,14 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
               <div className={cn(SKELETON, "h-10 w-[70%] max-w-[190px] rounded-lg")} />
             </div>
           ) : (
-            <p
-              aria-label={`Amount to buy in ${to.fiat}`}
+            <FitAmount
+              label={`Amount to buy in ${to.fiat}`}
+              text={receive === null ? "0" : formatNumber(receive)}
               className={cn(
-                "min-w-0 flex-1 truncate font-mono font-semibold leading-none tracking-[-0.02em]",
-                buyAmountSize(receive === null ? "0" : formatNumber(receive)),
+                "min-w-0 flex-1 overflow-hidden whitespace-nowrap font-mono font-semibold leading-none tracking-[-0.02em]",
                 receive === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
               )}
-            >
-              {receive === null ? "0" : formatNumber(receive)}
-            </p>
+            />
           )}
           <TokenPicker label="Buy" account={to} onSelect={(currency) => changeFrom(otherCurrency(currency))} />
         </div>
@@ -1270,12 +1312,11 @@ function SendFormReady({ session }: { session: TradeSession }) {
       else if (succeeded === false) setStatus({ tone: "error", text: "The transfer reverted. Nothing was sent." });
       else setSent({ text: `Sending ${formatMoney("USDC", value)} to ${to}. It can take a minute to arrive.`, txHash: hash });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      console.error("[send] the wallet did not send", error);
+      const message = error instanceof Error ? error.message.split("\n")[0].replace(/\.$/, "") : "";
       setStatus({
         tone: "error",
-        text: /sponsor/i.test(message)
-          ? "Gas sponsorship isn't available for this wallet right now. Nothing was sent."
-          : message || "The transfer could not be sent. Nothing was sent.",
+        text: message ? `${message}. Nothing was sent.` : "The transfer could not be sent. Nothing was sent.",
       });
     } finally {
       setIsSubmitting(false);
