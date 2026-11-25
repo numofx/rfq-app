@@ -5,8 +5,8 @@ import { addMilliseconds, format, startOfYear, subDays, subMonths } from "date-f
 import { Info } from "lucide-react";
 import { PANEL_CARD, PANEL_TRAY } from "@/components/dashboard/panel-styles";
 import { accountHoldings, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
-import { useBalanceHistory, useVenueMarket } from "@/lib/hooks/useTrading";
-import { SPOT_SYMBOL } from "@/lib/venue/market";
+import { useUsdPerCngn } from "@/lib/hooks/useExchangeRate";
+import { useBalanceHistory } from "@/lib/hooks/useTrading";
 import { cn } from "@/lib/utils";
 
 const RANGES = ["1W", "1M", "3M", "YTD", "All"] as const;
@@ -34,13 +34,10 @@ function getRangeLabels(start: Date, now: Date) {
   );
 }
 
-/** The trading account's USDC plus its cNGN at the spot mid, or a dash while either is unknown. */
+/** The trading account's USDC plus its cNGN at 0x's mid, or a dash while either is unknown. */
 function TotalBalance({ session }: { session: TradeSession | null }) {
-  const { market } = useVenueMarket(SPOT_SYMBOL);
+  const mid = useUsdPerCngn();
   const holdings = accountHoldings(session);
-  const bid = market?.bids[0]?.price;
-  const ask = market?.asks[0]?.price;
-  const mid = bid && ask ? (bid + ask) / 2 : null;
 
   let total: string = "—";
   if (holdings === "none") total = "0.00";
@@ -67,27 +64,26 @@ function ChartNote({ children }: { children: string }) {
 
 /**
  * The trading account's value over the range, read from the ledger at each point. cNGN is valued
- * at today's spot mid, so the line shows deposits, trades and fills rather than the rate moving.
+ * at today's 0x mid, so the line shows deposits, trades and fills rather than the rate moving.
  * Drawn as steps: a balance holds until something changes it.
  */
 function BalanceChart({ session, rangeKey, startMs }: { session: TradeSession | null; rangeKey: string; startMs: number }) {
   const holdings = accountHoldings(session);
   const subaccountId = holdings !== null && holdings !== "none" ? session?.subaccountId ?? null : null;
   const { history, isLoading } = useBalanceHistory(subaccountId, rangeKey, startMs, CHART_POINTS);
-  const { market } = useVenueMarket(SPOT_SYMBOL);
+  const mid = useUsdPerCngn();
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const bid = market?.bids[0]?.price;
-  const ask = market?.asks[0]?.price;
-  const mid = bid && ask ? (bid + ask) / 2 : 0;
-  const values = history?.map((point) => point.usdc + point.cngn * mid) ?? [];
+  const values = history?.map((point) => point.usdc + point.cngn * (mid ?? 0)) ?? [];
+  // Without a rate, cNGN would be drawn as worth nothing: wait for one if the range holds any.
+  const awaitsRate = mid === null && (history?.some((point) => point.cngn !== 0) ?? false);
   const max = Math.max(0, ...values);
 
   if (holdings === "none") return <ChartNote>Your balance history will appear here once you add funds.</ChartNote>;
   if (session !== null && session.isReady && !session.isAuthenticated) {
     return <ChartNote>Open Add funds and verify your email to see your balance history.</ChartNote>;
   }
-  if (holdings === null || isLoading) return <ChartNote>Loading your balance history</ChartNote>;
+  if (holdings === null || isLoading || awaitsRate) return <ChartNote>Loading your balance history</ChartNote>;
   if (!history || values.length < 2) return <ChartNote>Your balance history couldn&apos;t be loaded.</ChartNote>;
   if (max === 0) return <ChartNote>No balance in this period.</ChartNote>;
 
