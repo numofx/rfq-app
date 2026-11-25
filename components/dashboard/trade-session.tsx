@@ -220,10 +220,13 @@ export function TradeAction({
   disabledReason,
   isSubmitting,
   isConfirmed = false,
+  submittingLabel = "Placing order",
   status,
 }: {
   session: TradeSession | null;
   label: string;
+  /** What the button reads while the action runs. */
+  submittingLabel?: string;
   /** The last order filled in full: the button reads Confirmed instead of reporting it underneath. */
   isConfirmed?: boolean;
   /** Why the order can't be placed as entered; null when it can. */
@@ -290,7 +293,7 @@ export function TradeAction({
             Confirmed
           </>
         ) : isSubmitting ? (
-          "Placing order"
+          submittingLabel
         ) : (
           label
         )}

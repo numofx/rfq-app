@@ -1,6 +1,7 @@
 import type { ConnectedWallet } from "@privy-io/react-auth";
-import { createWalletClient, custom, encodeAbiParameters, getAddress, hashStruct, parseAbi, parseUnits } from "viem";
+import { createWalletClient, custom, encodeAbiParameters, encodeFunctionData, getAddress, hashStruct, parseAbi, parseUnits } from "viem";
 import {
+  CNGN_ASSET,
   TRADING_MANAGER_ADDRESS,
   USDC_CASH_ASSET,
   createBasePublicClient,
@@ -102,9 +103,83 @@ export async function depositUsdc({
     message: { owner, spender: DEPOSIT_MODULE_ADDRESS, value: amount, nonce: permitNonce, deadline: expiry },
   });
 
+  return submitDeposit({
+    asset: USDC_CASH_ASSET,
+    amount,
+    expiry,
+    permit: { value: amount.toString(), deadline: expiry.toString(), signature: permitSignature },
+    subaccountId,
+    wallet,
+  });
+}
+
+/** cNGN on Base: six decimals and no EIP-2612 permit, so a cNGN deposit needs an approval sent first. */
+export const CNGN_TOKEN_ADDRESS = "0x46C85152bFe9f96829aA94755D9f915F9B10EF5F";
+/** The venue refuses smaller cNGN deposits (DEPOSIT_ASSETS in the exchange repo's infra/aws/deposits.tf). */
+export const MIN_DEPOSIT_CNGN = 15_000;
+
+const erc20Abi = parseAbi([
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+]);
+
+/** The call approving the DepositModule for `amountUnits` of cNGN, or null when the allowance already covers it. */
+export async function cngnDepositApproval(owner: string, amountUnits: bigint) {
+  const allowance = await createBasePublicClient().readContract({
+    abi: erc20Abi,
+    address: CNGN_TOKEN_ADDRESS,
+    args: [getAddress(owner), DEPOSIT_MODULE_ADDRESS],
+    functionName: "allowance",
+  });
+  if (allowance >= amountUnits) return null;
+  return {
+    to: CNGN_TOKEN_ADDRESS as `0x${string}`,
+    data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [DEPOSIT_MODULE_ADDRESS, amountUnits] }),
+  };
+}
+
+/**
+ * Moves `amountUnits` (six decimals) of the wallet's cNGN into its existing trading account. The
+ * DepositModule must already be approved for it (`cngnDepositApproval`); the wallet signs only the
+ * deposit action, and the venue submits it and pays the gas.
+ */
+export async function depositCngn({
+  amountUnits,
+  subaccountId,
+  wallet,
+}: {
+  amountUnits: bigint;
+  subaccountId: string;
+  wallet: ConnectedWallet;
+}): Promise<DepositRecord> {
+  const expiry = BigInt(Math.floor(Date.now() / 1000) + DEPOSIT_SIGNATURE_LIFETIME_SECONDS);
+  return submitDeposit({ asset: CNGN_ASSET, amount: amountUnits, expiry, subaccountId, wallet });
+}
+
+/** Signs the DepositModule action for `amount` of `asset`, forwards it to the venue, and polls its record. */
+async function submitDeposit({
+  asset,
+  amount,
+  expiry,
+  permit,
+  subaccountId,
+  wallet,
+}: {
+  asset: string;
+  amount: bigint;
+  expiry: bigint;
+  permit?: { value: string; deadline: string; signature: string };
+  subaccountId: string | null;
+  wallet: ConnectedWallet;
+}): Promise<DepositRecord> {
+  const chain = getAppChain();
+  await wallet.switchChain(chain.id);
+  const walletClient = createWalletClient({ chain, transport: custom(await wallet.getEthereumProvider()) });
+  const owner = getAddress(wallet.address);
+
   const data = encodeAbiParameters(
     [{ type: "uint256" }, { type: "address" }, { type: "address" }],
-    [amount, USDC_CASH_ASSET, TRADING_MANAGER_ADDRESS]
+    [amount, getAddress(asset), TRADING_MANAGER_ADDRESS]
   );
   const account = subaccountId ?? "0";
   const nonce = createOrderNonce();
@@ -140,7 +215,7 @@ export async function depositUsdc({
       signer: owner,
     },
     signature,
-    permit: { value: amount.toString(), deadline: expiry.toString(), signature: permitSignature },
+    ...(permit ? { permit } : {}),
   });
 
   const response = await fetch("/api/venue/deposits", {

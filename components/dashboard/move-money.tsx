@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
@@ -14,11 +14,13 @@ import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
 import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
 import { TOKEN_DECIMALS, withdraw } from "@/lib/venue/withdraw";
-import { createWalletClient, custom, parseUnits } from "viem";
+import { createWalletClient, custom, formatUnits, parseUnits } from "viem";
 import { useSendTransaction } from "@privy-io/react-auth";
 import { getAppChain } from "@/lib/venue/config";
 import { recipientProblem, usdcTransfer, waitForTransfer } from "@/lib/venue/send";
-import { FUTURE_SYMBOL, SPOT_SYMBOL, type VenueMarket } from "@/lib/venue/market";
+import { FUTURE_SYMBOL, type VenueMarket } from "@/lib/venue/market";
+import { ExchangeStopped, MIN_DEPOSIT, runExchange, type ExchangeResume, type SendCall } from "@/lib/venue/exchange";
+import { EXCHANGE_TOKENS, fetchZeroExQuote } from "@/lib/zeroex";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
@@ -495,51 +497,179 @@ function SwapDetailRow({ label, value, strong = false }: { label: string; value:
   );
 }
 
-/** Converts between the accounts at the spot rate: a market order on cNGN-USDC. Mounted only while open. */
+/** Sells this much to read the rate before an amount is entered: about $100 either way. */
+const REFERENCE_SELL: Record<Currency, number> = { USDC: 100, cNGN: 150_000 };
+const PRICE_DEBOUNCE_MS = 400;
+const PRICE_POLL_MS = 15_000;
+
+const toUnits = (currency: Currency, value: number) =>
+  parseUnits(value.toFixed(EXCHANGE_TOKENS[currency].decimals), EXCHANGE_TOKENS[currency].decimals);
+const fromUnits = (currency: Currency, units: string | bigint) => Number(formatUnits(BigInt(units), EXCHANGE_TOKENS[currency].decimals));
+const FIAT: Record<Currency, string> = { USDC: "USD", cNGN: "NGN" };
+
+/** 0x's indicative price for selling `value` of `sell`, refreshed while the dialog is open. */
+function useExchangePrice(sell: Currency, value: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), PRICE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+  const sellValue = debounced > 0 ? debounced : REFERENCE_SELL[sell];
+  const sellUnits = toUnits(sell, sellValue);
+  const { data, error, isPending } = useQuery({
+    queryKey: ["zeroex-price", sell, sellUnits.toString()],
+    queryFn: ({ signal }) => fetchZeroExQuote({ sell, sellUnits, signal }),
+    refetchInterval: PRICE_POLL_MS,
+    retry: 1,
+  });
+  const price = data && data.liquidityAvailable ? data : null;
+  return {
+    price,
+    /** Whether `price` is for the amount entered, rather than the reference amount or a stale one. */
+    isForAmount: price !== null && debounced > 0 && debounced === value,
+    isPending: isPending || debounced !== value,
+    error: data && !data.liquidityAvailable ? "Not enough liquidity for this amount" : error ? error.message : null,
+  };
+}
+
+/** Sends a wallet transaction: sponsored through Privy for the embedded wallet, which holds no ETH; a browser wallet pays its own. */
+function useSendCall(wallet: TradeSession["wallet"]): SendCall {
+  const { sendTransaction } = useSendTransaction();
+  return async ({ gas, ...call }) => {
+    if (!wallet) throw new Error("No wallet");
+    const chain = getAppChain();
+    if (wallet.walletClientType === "privy") {
+      const { hash } = await sendTransaction(
+        { ...call, chainId: chain.id, ...(gas === undefined ? {} : { gasLimit: gas }) },
+        { sponsor: true, address: wallet.address, uiOptions: { showWalletUIs: false } }
+      );
+      return hash;
+    }
+    await wallet.switchChain(chain.id);
+    const walletClient = createWalletClient({ chain, transport: custom(await wallet.getEthereumProvider()) });
+    return walletClient.sendTransaction({ account: wallet.address as `0x${string}`, ...call, gas });
+  };
+}
+
+/**
+ * Exchanges between the trading account's balances at 0x's rate, the same routing swap.numofx.com uses. 0x
+ * swaps wallet tokens, so the exchange withdraws to the wallet, swaps, and deposits the proceeds back
+ * (lib/venue/exchange.ts); if a step stops, the dialog offers to continue it. Mounted only while open.
+ */
 function ExchangeForm({ session }: { session: TradeSession | null }) {
+  if (session === null) return <ExchangeFormBody session={null} sendCall={null} />;
+  return <ExchangeFormWithWallet session={session} />;
+}
+
+function ExchangeFormWithWallet({ session }: { session: TradeSession }) {
+  const sendCall = useSendCall(session.wallet);
+  return <ExchangeFormBody session={session} sendCall={sendCall} />;
+}
+
+function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null; sendCall: SendCall | null }) {
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [fromCode, setFromCode] = useState<Currency>("USDC");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progress, setProgress] = useState("Exchanging");
+  const [status, setStatus] = useState<Status>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  // Set when a step stopped after money left the account: what is in the wallet, and the step that picks it up.
+  const [resume, setResume] = useState<ExchangeResume | null>(null);
   const from = ACCOUNTS.find(({ currency }) => currency === fromCode) ?? ACCOUNTS[0];
   const toCode = otherCurrency(fromCode);
   const to = ACCOUNTS.find(({ currency }) => currency === toCode) ?? ACCOUNTS[1];
-  const { market, isPending } = useVenueMarket(SPOT_SYMBOL);
-  const { isConfirmed, isSubmitting, status, reset, submit } = useOrderSubmission(session);
 
   const value = Number(amount);
-  const plan = market && value > 0 ? planOrder(market, fromCode, value) : null;
+  const { price, isForAmount, isPending, error: priceError } = useExchangePrice(fromCode, value);
   const available = balanceOf(session, fromCode);
   const toBalance = balanceOf(session, toCode);
   const exceedsBalance = available !== null && value > available;
-  const isError = exceedsBalance && !isConfirmed;
-  const receive =
-    plan && typeof plan !== "string" ? (toCode === "cNGN" ? plan.cngn : plan.notionalUsdc - plan.feeUsdc) : null;
-  // The spot book is quoted in USDC per cNGN; command shows rates as cNGN per USDC.
-  const bestPrice = market ? (fromCode === "USDC" ? market.asks[0]?.price : market.bids[0]?.price) : undefined;
-  const rate = plan && typeof plan !== "string" ? 1 / plan.expectedPrice : bestPrice ? 1 / bestPrice : null;
+  const isError = exceedsBalance && !isConfirmed && resume === null;
+
+  const sold = price ? fromUnits(fromCode, price.sellAmount) : null;
+  const bought = price ? fromUnits(toCode, price.buyAmount) : null;
+  // Rates read as NGN per USD whichever way the exchange runs.
+  const rate = sold && bought ? (fromCode === "USDC" ? bought / sold : sold / bought) : null;
+  const receive = isForAmount ? bought : null;
+  const minReceive = isForAmount && price ? fromUnits(toCode, price.minBuyAmount) : null;
   const valueUsd = fromCode === "USDC" ? value : rate ? value / rate : null;
+  const zeroExFee = price?.fees?.zeroExFee ?? null;
+  const feeCurrency = zeroExFee
+    ? ((Object.keys(EXCHANGE_TOKENS) as Currency[]).find((code) => EXCHANGE_TOKENS[code].address.toLowerCase() === zeroExFee.token.toLowerCase()) ?? null)
+    : null;
+  const feeText =
+    isForAmount && zeroExFee && feeCurrency
+      ? `${formatNumber(fromUnits(feeCurrency, zeroExFee.amount))} ${FIAT[feeCurrency]}${
+          feeCurrency === fromCode && sold ? ` (${formatPercent(fromUnits(feeCurrency, zeroExFee.amount) / sold)})` : ""
+        }`
+      : "—";
+  const belowMinimum = minReceive !== null && minReceive < MIN_DEPOSIT[toCode];
 
   let disabledReason: string | null = null;
-  if (!(value > 0)) disabledReason = "";
+  if (resume !== null) disabledReason = null;
+  else if (!(value > 0)) disabledReason = "";
   else if (exceedsBalance) disabledReason = "";
-  else if (plan === null) disabledReason = isPending ? "Loading the market" : "The market is unavailable";
-  else if (typeof plan === "string") disabledReason = plan;
+  else if (priceError) disabledReason = priceError;
+  else if (!isForAmount) disabledReason = isPending ? "Getting a rate" : "The rate is unavailable";
+  else if (belowMinimum) disabledReason = `The smallest exchange pays out ${formatNumber(MIN_DEPOSIT[toCode])} ${to.fiat}`;
+
+  function clearOutcome() {
+    setStatus(null);
+    setIsConfirmed(false);
+  }
 
   function changeAmount(next: string) {
+    if (resume !== null || isSubmitting) return;
     setAmount(next);
-    reset();
+    clearOutcome();
   }
 
   function changeFrom(currency: Currency) {
+    if (resume !== null || isSubmitting) return;
     setFromCode(currency);
-    reset();
+    clearOutcome();
+  }
+
+  async function run(start: Parameters<typeof runExchange>[1]) {
+    if (!canTrade(session) || sendCall === null) return;
+    setIsSubmitting(true);
+    clearOutcome();
+    try {
+      const done = await runExchange(
+        { subaccountId: session.subaccountId, wallet: session.wallet, sendCall, onProgress: setProgress },
+        start
+      );
+      setResume(null);
+      setAmount("");
+      setIsConfirmed(true);
+      setStatus({ tone: "neutral", text: `Added ${formatNumber(fromUnits(done.currency, done.units))} ${FIAT[done.currency]} to your account.` });
+    } catch (error) {
+      if (error instanceof ExchangeStopped) setResume(error.resume);
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "The exchange failed." });
+    } finally {
+      setIsSubmitting(false);
+      setProgress("Exchanging");
+      session.refreshBalances();
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-usdc"] });
+    }
   }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (disabledReason !== null || !market || !plan || typeof plan === "string") return;
-    const verb = plan.side === "buy" ? "Bought" : "Sold";
-    void submit(market, plan, (cngn) => `${verb} ₦${formatNumber(cngn)}.`);
+    if (isSubmitting) return;
+    if (resume !== null) {
+      void run(resume);
+      return;
+    }
+    if (disabledReason !== null) return;
+    void run({ stage: "withdraw", sell: fromCode, sellUnits: toUnits(fromCode, value) });
   }
+
+  let label = isError ? `Insufficient ${from.fiat} balance` : "Exchange";
+  if (resume?.stage === "swap") label = "Try the exchange again";
+  else if (resume?.stage === "deposit") label = `Deposit the ${FIAT[resume.currency]} back`;
 
   return (
     <form className="mt-5" onSubmit={onSubmit}>
@@ -568,6 +698,7 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
             inputMode="decimal"
             placeholder="0"
             value={amount}
+            readOnly={resume !== null || isSubmitting}
             onChange={(event) => {
               if (/^\d*\.?\d{0,2}$/.test(event.target.value)) changeAmount(event.target.value);
             }}
@@ -618,29 +749,35 @@ function ExchangeForm({ session }: { session: TradeSession | null }) {
       </div>
 
       <dl className="mt-5 space-y-2.5 px-5 text-[14px]">
-        <SwapDetailRow label="Rate" value={rate === null ? (isPending ? "Loading" : "Unavailable") : `1 USD = ${formatNumber(rate)} NGN`} />
+        <SwapDetailRow label="Rate" value={rate === null ? (priceError ? "Unavailable" : "Loading") : `1 USD = ${formatNumber(rate)} NGN`} />
+        <SwapDetailRow label="Fee" value={feeText} />
         <SwapDetailRow
-          label="Fee"
-          value={
-            plan && typeof plan !== "string"
-              ? `${formatMoney("USDC", plan.feeUsdc)} (${formatPercent(market ? market.takerFeeBps / 10_000 : 0)})`
-              : market
-                ? formatPercent(market.takerFeeBps / 10_000)
-                : "—"
-          }
+          label="You receive"
+          value={receive === null ? "—" : `${formatNumber(receive)} ${to.fiat}`}
+          strong
         />
-        <SwapDetailRow label="You receive" value={receive === null ? "—" : `${formatNumber(receive)} ${to.fiat}`} strong />
+        {minReceive !== null ? <SwapDetailRow label="At least" value={`${formatNumber(minReceive)} ${to.fiat}`} /> : null}
       </dl>
 
       <div className="mt-5">
         <TradeAction
           session={session}
-          label={isError ? `Insufficient ${from.fiat} balance` : "Exchange"}
+          label={label}
+          submittingLabel={progress}
           disabledReason={disabledReason}
           isSubmitting={isSubmitting}
           isConfirmed={isConfirmed}
           status={status}
         />
+        {resume?.stage === "swap" && !isSubmitting ? (
+          <button
+            type="button"
+            onClick={() => void run({ stage: "deposit", currency: resume.sell, units: resume.sellUnits })}
+            className={cn(NOTE, LINK, "mx-auto block")}
+          >
+            Return the {FIAT[resume.sell]} to your account instead
+          </button>
+        ) : null}
       </div>
     </form>
   );
