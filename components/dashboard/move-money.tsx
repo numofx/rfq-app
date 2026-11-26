@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, Wallet, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { CurrencyIcon } from "@/components/dashboard/currency-icon";
+import { isMoveMoneyKind, MOVE_MONEY_ACTIONS, type MoveMoneyKind } from "@/components/dashboard/move-money-actions";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
@@ -43,7 +44,7 @@ const QUOTED_UNTIL = UNTIL_DATES[0];
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
 type Status = { tone: "neutral" | "error"; text: string } | null;
-type DialogKind = "lock-rate" | "exchange" | "deposit" | "withdraw" | "send";
+type DialogKind = MoveMoneyKind;
 
 const MENU_ITEM =
   "flex h-[42px] items-center justify-between gap-4 rounded-lg px-3 text-[15px] text-[#141414] outline-none dark:text-white";
@@ -1515,7 +1516,7 @@ function TradeDialog({
   );
 }
 
-/** Opens a dialog named by `?action=` (the sidebar's Exchange link), then drops it from the URL. */
+/** Opens a dialog named by `?action=` (the sidebar's Move money links), then drops it from the URL. */
 function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1523,7 +1524,7 @@ function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
   const action = searchParams.get("action");
 
   useEffect(() => {
-    if (action === "exchange" || action === "lock-rate" || action === "deposit" || action === "withdraw" || action === "send") {
+    if (isMoveMoneyKind(action)) {
       onOpen(action);
       router.replace(pathname);
     }
@@ -1556,23 +1557,24 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={8} className={cn(MENU_CONTENT, "w-[240px]")}>
-            {(
-              [
-                ["lock-rate", "Lock rate"],
-                ["exchange", "Exchange"],
-                ["deposit", "Deposit"],
-                ["withdraw", "Withdraw"],
-                ["send", "Send"],
-              ] as const
-            ).map(([kind, label]) => (
-              <DropdownMenu.Item
-                key={kind}
-                onSelect={() => setDialog(kind)}
-                className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-              >
-                {label}
-              </DropdownMenu.Item>
-            ))}
+            {MOVE_MONEY_ACTIONS.map(({ kind, label }) =>
+              kind === null ? (
+                <DropdownMenu.Item key={label} disabled className={cn(MENU_ITEM, "text-black/45 dark:text-white/40")}>
+                  {label}
+                  <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-black/60 dark:bg-white/10 dark:text-white/60">
+                    Soon
+                  </span>
+                </DropdownMenu.Item>
+              ) : (
+                <DropdownMenu.Item
+                  key={kind}
+                  onSelect={() => setDialog(kind)}
+                  className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
+                >
+                  {label}
+                </DropdownMenu.Item>
+              )
+            )}
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>

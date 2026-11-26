@@ -7,10 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTheme } from "next-themes";
 import {
-  ArrowRightLeft,
   ChevronDown,
   Home,
-  Landmark,
   List,
   LogOut,
   Moon,
@@ -19,6 +17,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
+import { MOVE_MONEY_ACTIONS } from "@/components/dashboard/move-money-actions";
 import { useAccountUser } from "@/lib/hooks/useAccountUser";
 import { useSignOut } from "@/components/privy-provider";
 import { supabase } from "@/lib/supabase/client";
@@ -175,8 +174,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
           <p className="mb-2 mt-8 px-3.5 text-[12px] text-black/60 dark:text-white/50">Move money</p>
           <div className="space-y-0.5">
-            <SidebarItem icon={ArrowRightLeft} label="Exchange" href="/dashboard?action=exchange" />
-            <SidebarItem icon={Landmark} label="Off/On Ramp" href="#" isSoon />
+            {MOVE_MONEY_ACTIONS.map(({ kind, label, icon }) => (
+              <SidebarItem key={label} icon={icon} label={label} href={kind === null ? "#" : `/dashboard?action=${kind}`} isSoon={kind === null} />
+            ))}
           </div>
         </nav>
 
