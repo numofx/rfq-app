@@ -6,7 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, X } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, Wallet, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
@@ -529,9 +529,6 @@ function SwapDetailRow({
 const SKELETON = "h-4 animate-pulse rounded-md bg-black/[0.07] dark:bg-white/10";
 const SWAP_PANEL_WARNING = "bg-[#FBF2E2] ring-1 ring-inset ring-[#E8C88C] dark:bg-[#E8C88C]/10 dark:ring-[#E8C88C]/40";
 const WARNING_TEXT = "text-[#8A5A12] dark:text-[#E8C88C]";
-const STRAY_BUTTON =
-  "h-8 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#141414] shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white";
-
 /** Amounts as the mockup writes them: up to two decimals, no trailing zeros. */
 const formatAmount = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
@@ -828,7 +825,16 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
     void run({ stage: "withdraw", sell: fromCode, sellUnits: toUnits(fromCode, value) });
   }
 
-  let label = value > 0 ? `Exchange ${formatAmount(value)} ${from.fiat}` : "Exchange";
+  const sellHint = fromCode === "cNGN" && value > 0 && valueUsd !== null ? `≈ ${formatMoney("USDC", valueUsd)}` : "";
+  const strayRows =
+    walletTokens === null
+      ? []
+      : strayFunds.map((currency) => {
+          const held = fromUnits(currency, walletTokens[currency]);
+          return { currency, held, canDeposit: held >= MIN_DEPOSIT[currency] };
+        });
+
+  let label = value > 0 ? `Exchange ${formatAmount(value)} ${from.fiat}` : "Enter an amount";
   if (isError) label = `Insufficient ${from.fiat} balance`;
   else if (isLoadingAmount) label = "Getting best rate…";
   else if (belowMinimum) label = minimumSell === null ? "Below the minimum" : `Minimum ${formatAmount(minimumSell)} ${from.fiat}`;
@@ -837,42 +843,6 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
 
   return (
     <form className="mt-5" onSubmit={onSubmit}>
-      {strayFunds.length > 0 && walletTokens !== null ? (
-        <div className={cn("mb-3 space-y-2.5 rounded-2xl px-5 py-4 text-[13px]", SWAP_PANEL_WARNING)}>
-          {strayFunds.map((currency) => {
-            const held = fromUnits(currency, walletTokens[currency]);
-            const canDeposit = held >= MIN_DEPOSIT[currency];
-            return (
-              <div key={currency}>
-                <p className={cn("flex items-start gap-1.5", WARNING_TEXT)}>
-                  <Info className="mt-[2px] h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                  <span>
-                    <span className="font-mono font-semibold">
-                      {formatNumber(held)} {FIAT[currency]}
-                    </span>{" "}
-                    is in your wallet, outside your account.
-                  </span>
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2 pl-5">
-                  <button type="button" onClick={() => moveStray(currency, "exchange")} className={STRAY_BUTTON}>
-                    Exchange it for {FIAT[otherCurrency(currency)]}
-                  </button>
-                  {canDeposit ? (
-                    <button type="button" onClick={() => moveStray(currency, "deposit")} className={STRAY_BUTTON}>
-                      Deposit it to your account
-                    </button>
-                  ) : (
-                    <span className={cn("self-center", WARNING_TEXT)}>
-                      Deposits start at {formatNumber(MIN_DEPOSIT[currency])} {FIAT[currency]}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-
       <div className={cn(SWAP_PANEL, isError ? SWAP_PANEL_ERROR : SWAP_PANEL_IDLE)}>
         <div className="flex h-7 items-center justify-between gap-3">
           <span className={SWAP_LABEL}>You sell</span>
@@ -906,14 +876,43 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
           />
           <TokenPicker label="Sell" account={from} onSelect={changeFrom} />
         </div>
-        <div className="mt-3 flex h-5 items-center justify-between gap-3 text-[13px]">
-          <span className="font-mono text-black/60 dark:text-white/60">
-            {fromCode === "cNGN" && value > 0 && valueUsd !== null ? `≈ ${formatMoney("USDC", valueUsd)}` : ""}
-          </span>
-          <span aria-live="polite" className={cn("font-medium", ERROR_TEXT)}>
-            {isError ? "Exceeds balance" : ""}
-          </span>
-        </div>
+        {sellHint !== "" || isError || strayRows.length === 0 ? (
+          <div className="mt-3 flex h-5 items-center justify-between gap-3 text-[13px]">
+            <span className="font-mono text-black/60 dark:text-white/60">{sellHint}</span>
+            <span aria-live="polite" className={cn("font-medium", ERROR_TEXT)}>
+              {isError ? "Exceeds balance" : ""}
+            </span>
+          </div>
+        ) : null}
+        {strayRows.map(({ currency, held, canDeposit }) => (
+          <div
+            key={currency}
+            className="mt-2 flex h-11 items-center gap-2 rounded-xl bg-white/70 pl-3 pr-1.5 text-[13px] dark:bg-white/[0.06]"
+          >
+            <Wallet className="h-4 w-4 shrink-0 text-black/55 dark:text-white/55" strokeWidth={1.75} aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate text-[#141414] dark:text-white">
+              +{formatNumber(held)} {FIAT[currency]}
+              <span className="hidden sm:inline"> in your wallet</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => moveStray(currency, "deposit")}
+              disabled={!canDeposit}
+              title={canDeposit ? "Deposit it to your account" : `Deposits start at ${formatNumber(MIN_DEPOSIT[currency])} ${FIAT[currency]}`}
+              className="h-8 shrink-0 rounded-full px-2.5 font-semibold text-black/60 outline-none hover:text-[#141414] focus-visible:ring-2 focus-visible:ring-black/15 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/60 dark:hover:text-white"
+            >
+              Deposit
+            </button>
+            <button
+              type="button"
+              onClick={() => moveStray(currency, "exchange")}
+              title={`Exchange it for ${FIAT[otherCurrency(currency)]}`}
+              className="h-8 shrink-0 rounded-full bg-[#141414] px-3.5 font-semibold text-white outline-none hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-black/25 dark:bg-white dark:text-[#141414] dark:hover:bg-white/85"
+            >
+              Sell it
+            </button>
+          </div>
+        ))}
       </div>
 
       <div className="relative z-10 flex h-2 justify-center">
