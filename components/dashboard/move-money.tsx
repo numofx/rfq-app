@@ -6,12 +6,12 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, Wallet, X } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Check, ChevronDown, Copy, Info, Wallet, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
 import { CurrencyIcon } from "@/components/dashboard/currency-icon";
 import { isMoveMoneyKind, MOVE_MONEY_ACTIONS, type MoveMoneyKind } from "@/components/dashboard/move-money-actions";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
-import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
+import { quoteForward } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
 import { useVenueMarket, useWalletUsdc } from "@/lib/hooks/useTrading";
 import { depositUsdc, MIN_DEPOSIT_USDC } from "@/lib/venue/deposit";
@@ -28,18 +28,20 @@ import { useWalletTokens, WALLET_DUST } from "@/lib/hooks/useWalletTokens";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
-const UNTIL_DATES = [
-  "Nov 30, 2026",
-  "Dec 31, 2026",
-  "Jan 31, 2027",
-  "Feb 28, 2027",
-  "Mar 31, 2027",
-  "Apr 30, 2027",
-  "May 31, 2027",
+/**
+ * The months a rate can be locked until, as the Lock rate dialog lists them. Only `expiresAt` entries have a listed
+ * book (cNGN-30NOV26, at 14:00 UTC); the rest show greyed out until their series is listed and wired up.
+ */
+const LOCK_EXPIRIES: { month: string; date: string; expiresAt: number }[] = [
+  { month: "Nov", date: "Nov 30", expiresAt: Date.UTC(2026, 10, 30, 14) / 1000 },
+  { month: "Dec", date: "Dec 31", expiresAt: Date.UTC(2026, 11, 31, 14) / 1000 },
+  { month: "Jan", date: "Jan 31", expiresAt: Date.UTC(2027, 0, 31, 14) / 1000 },
+  { month: "Feb", date: "Feb 28", expiresAt: Date.UTC(2027, 1, 28, 14) / 1000 },
+  { month: "Mar", date: "Mar 31", expiresAt: Date.UTC(2027, 2, 31, 14) / 1000 },
+  { month: "Jun", date: "Jun 30", expiresAt: Date.UTC(2027, 5, 30, 14) / 1000 },
 ];
-// The only date with a listed book: cNGN-30NOV26.
-const QUOTED_UNTIL = UNTIL_DATES[0];
-// No flow behind these yet.
+/** The one expiry the app trades: FUTURE_SYMBOL. */
+const LISTED_EXPIRY = "Nov";
 
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
@@ -60,7 +62,6 @@ const ERROR_TEXT = "text-[#B4412F] dark:text-[#E98A7A]";
 const formatNumber = (value: number) =>
   value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const formatSigned = (value: number) => `${value < 0 ? "−" : "+"}${formatNumber(Math.abs(value))}`;
 
 const formatPercent = (fraction: number) => `${(fraction * 100).toFixed(2)}%`;
 
@@ -101,83 +102,6 @@ function RateCardRow({ label, hint, value }: { label: string; hint?: string; val
         {hint ? <span className="text-black/50 dark:text-white/50"> ({hint})</span> : null}
       </dt>
       <dd className="text-right font-mono text-[#141414] dark:text-white">{value}</dd>
-    </div>
-  );
-}
-
-/** The rate and what locking the amount comes to, with how the rate is made up behind "Show details". */
-function RateCard({ quote, currency, message }: { quote: ForwardQuote | null; currency: string; message: string }) {
-  const [showDetails, setShowDetails] = useState(false);
-  const position = quote?.position ?? null;
-  const hasRows = quote !== null && (position !== null || showDetails);
-  const premium =
-    quote === null || quote.annualizedPremium === null
-      ? ""
-      : ` (${quote.annualizedPremium < 0 ? "−" : "+"}${formatPercent(Math.abs(quote.annualizedPremium))} a year)`;
-
-  return (
-    <div className="mt-5 rounded-2xl bg-[#F3EFE9] text-[14px] dark:bg-white/5">
-      <div className="flex items-baseline justify-between gap-4 px-[18px] py-3.5">
-        <p className="min-w-0 font-medium text-[#141414] dark:text-white">
-          Rate{" "}
-          <span className="text-[13px] font-normal text-black/60 dark:text-white/60">
-            {quote === null ? message : "cNGN per USDC, after fees"}
-          </span>
-        </p>
-        <p
-          className={cn(
-            "shrink-0 font-mono text-[20px] font-semibold leading-none",
-            quote === null ? "text-black/25 dark:text-white/30" : "text-[#141414] dark:text-white"
-          )}
-        >
-          {quote === null ? "—" : formatNumber(quote.rate)}
-        </p>
-      </div>
-
-      {hasRows ? (
-        <dl className="mx-[18px] space-y-2 border-t border-black/[0.07] pb-3 pt-3 dark:border-white/10">
-          {position ? (
-            <>
-              <RateCardRow
-                label="You lock"
-                value={currency === "USDC" ? `₦${formatNumber(position.locked)}` : `$${formatNumber(position.locked)}`}
-              />
-              <RateCardRow
-                label="Margin required"
-                hint={`${INITIAL_MARGIN_RATE * 100}%`}
-                value={`$${formatNumber(position.marginUsdc)}`}
-              />
-            </>
-          ) : null}
-          {showDetails ? (
-            <>
-              <RateCardRow label="Spot rate" value={formatNumber(quote.spot)} />
-              <RateCardRow label="Forward points" value={`${formatSigned(quote.points)}${premium}`} />
-              <RateCardRow
-                label="Fee"
-                hint={formatPercent(quote.feeRate)}
-                value={`${formatSigned(quote.feePoints)}${position ? ` ($${formatNumber(position.feeUsdc)})` : ""}`}
-              />
-              <RateCardRow
-                label="Settles"
-                value={`In ${quote.daysToExpiry} ${quote.daysToExpiry === 1 ? "day" : "days"}, cash in USDC`}
-              />
-            </>
-          ) : null}
-        </dl>
-      ) : null}
-
-      {quote === null ? null : (
-        <button
-          type="button"
-          aria-expanded={showDetails}
-          onClick={() => setShowDetails((current) => !current)}
-          className="flex h-9 w-full items-center justify-center gap-1.5 rounded-b-2xl border-t border-black/[0.07] text-[13px] font-medium text-[#141414] outline-none hover:bg-black/[0.03] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black/15 dark:border-white/10 dark:text-white dark:hover:bg-white/5 dark:focus-visible:ring-white/20"
-        >
-          {showDetails ? "Hide details" : "Show details"}
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showDetails && "rotate-180")} aria-hidden="true" />
-        </button>
-      )}
     </div>
   );
 }
@@ -319,101 +243,172 @@ function useOrderSubmission(session: TradeSession | null) {
 }
 
 /** Locks a forward rate: a market order on the cNGN-30NOV26 future. Mounted only while open. */
-function LockRateForm({ session }: { session: TradeSession | null }) {
+function LockRateForm({
+  session,
+  accountCode,
+  onAccountChange,
+}: {
+  session: TradeSession | null;
+  accountCode: Currency;
+  onAccountChange: (currency: Currency) => void;
+}) {
   const [amount, setAmount] = useState("");
-  const [accountCode, setAccountCode] = useState<Currency>("USDC");
-  const [until, setUntil] = useState(UNTIL_DATES[0]);
   const account = ACCOUNTS.find(({ currency }) => currency === accountCode) ?? ACCOUNTS[0];
   const { book, isPending: isRatePending } = useForwardBook();
   const { market } = useVenueMarket(FUTURE_SYMBOL);
   const { isConfirmed, isSubmitting, status, reset, submit } = useOrderSubmission(session);
 
+  const nowMs = Date.now();
+  const isOpen = (expiry: (typeof LOCK_EXPIRIES)[number]) => expiry.month === LISTED_EXPIRY && expiry.expiresAt * 1000 > nowMs;
+  const [selected, setSelected] = useState(() => LOCK_EXPIRIES.find(isOpen)?.month ?? null);
+  const expiry = LOCK_EXPIRIES.find(({ month }) => month === selected) ?? null;
+  const daysLeft = expiry ? Math.max(0, Math.ceil((expiry.expiresAt * 1000 - nowMs) / 86_400_000)) : null;
+
   const value = Number(amount);
-  const isQuotedDate = until === QUOTED_UNTIL;
-  const quote = book && isQuotedDate ? quoteForward(book, value, accountCode, Date.now()) : null;
-  const canQuoteWithoutAmount = book ? quoteForward(book, 0, accountCode, Date.now()) !== null : false;
+  const isLive = expiry !== null && isOpen(expiry);
+  const reference = book && isLive ? quoteForward(book, 0, accountCode, nowMs) : null;
+  const quote = book && isLive && value > 0 ? quoteForward(book, value, accountCode, nowMs) : null;
+  const rate = (quote ?? reference)?.rate ?? null;
+  const position = quote?.position ?? null;
+  const available = balanceOf(session, accountCode);
 
-  let rateMessage = "Unavailable";
-  if (!isQuotedDate) {
-    rateMessage = "No market for this date";
-  } else if (isRatePending) {
-    rateMessage = "Loading";
-  } else if (canQuoteWithoutAmount) {
-    rateMessage = "Not enough liquidity for this amount";
-  }
-
-  const plan = market && isQuotedDate && value > 0 ? planOrder(market, accountCode, value) : null;
+  const plan = market && isLive && value > 0 ? planOrder(market, accountCode, value) : null;
   const surplus = session?.balances?.imSurplusUsd ?? null;
   const marginNeeded = plan && typeof plan !== "string" ? (plan.marginUsdc ?? 0) + plan.feeUsdc : null;
-  const isShortOfMargin = marginNeeded !== null && surplus !== null && marginNeeded > surplus;
+  const isShortOfMargin = marginNeeded !== null && surplus !== null && marginNeeded > surplus && !isConfirmed;
 
   let disabledReason: string | null = null;
-  if (!(value > 0) || !isQuotedDate) disabledReason = "";
+  if (!(value > 0) || !isLive) disabledReason = "";
   else if (plan === null) disabledReason = "Loading the market";
   else if (typeof plan === "string") disabledReason = plan;
   else if (isShortOfMargin) {
     disabledReason = `Needs ${formatMoney("USDC", marginNeeded)} of margin. You have ${formatMoney("USDC", Math.max(surplus, 0))}.`;
   }
 
+  function changeAmount(next: string) {
+    setAmount(next);
+    reset();
+  }
+
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (disabledReason !== null || !market || !plan || typeof plan === "string") return;
-    const rate = 1 / plan.expectedPrice;
-    void submit(market, plan, (cngn) => `Locked ₦${formatNumber(cngn)} at about ${formatNumber(rate)} cNGN per USDC.`);
+    const lockedRate = 1 / plan.expectedPrice;
+    void submit(market, plan, (cngn) => `Locked ₦${formatNumber(cngn)} at about ${formatNumber(lockedRate)} NGN per USD.`);
   }
 
   return (
     <form className="mt-5" onSubmit={onSubmit}>
-      <AmountField
-        account={account}
-        amount={amount}
-        onAmountChange={(next) => {
-          setAmount(next);
-          reset();
-        }}
-        caption={isShortOfMargin && !isConfirmed ? "Not enough margin for this amount" : `Amount in ${account.fiat}`}
-        isError={isShortOfMargin && !isConfirmed}
-      />
+      <div className={cn(SWAP_PANEL, isShortOfMargin ? SWAP_PANEL_ERROR : SWAP_PANEL_IDLE)}>
+        <div className="flex h-7 items-center justify-between gap-3">
+          <span className={SWAP_LABEL}>Amount</span>
+          <span className="flex items-center gap-2">
+            <span className={SWAP_BALANCE}>
+              {available === null ? "—" : formatNumber(available)} {account.fiat}
+            </span>
+            {available !== null && available > 0 ? (
+              <button type="button" onClick={() => changeAmount((Math.floor(available * 100) / 100).toFixed(2))} className={MAX_BUTTON}>
+                Max
+              </button>
+            ) : null}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-baseline font-mono text-[44px] font-semibold leading-none tracking-[-0.02em] text-[#141414] dark:text-white">
+            <span aria-hidden="true">{account.symbol}</span>
+            <input
+              autoFocus
+              aria-label={`Amount to lock in ${account.fiat}`}
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(event) => {
+                if (/^\d*\.?\d{0,2}$/.test(event.target.value)) changeAmount(event.target.value);
+              }}
+              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-black/25 dark:placeholder:text-white/30"
+            />
+          </div>
+          <TokenPicker label="Lock from" account={account} onSelect={onAccountChange} />
+        </div>
+        {isShortOfMargin ? (
+          <p aria-live="polite" className={cn("mt-3 text-[13px] font-medium", ERROR_TEXT)}>
+            Not enough margin for this amount
+          </p>
+        ) : null}
+      </div>
 
-      {/* Too narrow side by side on a phone. */}
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
-        <AccountPicker id="lock-rate-account" label="Account" account={account} session={session} onSelect={setAccountCode} />
-
-        <div className="min-w-0">
-          <span id="lock-rate-until" className={FIELD_LABEL}>
+      <div className={cn(SWAP_PANEL, SWAP_PANEL_IDLE, "mt-2")}>
+        <div className="flex h-7 items-center justify-between gap-3">
+          <span id="lock-rate-until" className={SWAP_LABEL}>
             Until
           </span>
-          <DropdownMenu.Root modal={false}>
-            <DropdownMenu.Trigger asChild>
-              <button type="button" aria-labelledby="lock-rate-until lock-rate-until-value" className={FIELD_PILL}>
-                <Calendar className="h-4 w-4 shrink-0 text-black/60 dark:text-white/60" strokeWidth={1.75} aria-hidden="true" />
-                <span id="lock-rate-until-value" className="truncate text-[14px] font-medium text-[#141414] dark:text-white">
-                  {until}
+          <span className={SWAP_BALANCE}>
+            {expiry && daysLeft !== null ? `${expiry.date} · ${daysLeft} ${daysLeft === 1 ? "day" : "days"}` : "No date open"}
+          </span>
+        </div>
+        <div role="radiogroup" aria-labelledby="lock-rate-until" className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+          {LOCK_EXPIRIES.map((option) => {
+            const open = isOpen(option);
+            const isSelected = option.month === selected;
+            const chipRate = open && reference ? formatNumber(reference.rate) : "—";
+            return (
+              <button
+                key={option.month}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                disabled={!open}
+                title={open ? `Until ${option.date}` : `Nothing listed for ${option.date} yet`}
+                onClick={() => {
+                  setSelected(option.month);
+                  reset();
+                }}
+                className={cn(
+                  "flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl outline-none transition-colors focus-visible:ring-2 focus-visible:ring-black/20",
+                  isSelected
+                    ? "bg-[#141414] text-white dark:bg-white dark:text-[#141414]"
+                    : "bg-white text-[#141414] hover:bg-white/80 dark:bg-white/10 dark:text-white",
+                  !open && "cursor-not-allowed bg-white/50 text-black/30 hover:bg-white/50 dark:bg-white/[0.04] dark:text-white/30"
+                )}
+              >
+                <span className="text-[14px] font-semibold leading-none">{option.month}</span>
+                <span className={cn("font-mono text-[11px] leading-none", isSelected ? "opacity-80" : "opacity-60")}>
+                  {open && isRatePending && !book ? "…" : chipRate}
                 </span>
-                <ChevronDown className={FIELD_CHEVRON} aria-hidden="true" />
               </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content align="start" sideOffset={6} className={cn(MENU_CONTENT, "w-[var(--radix-dropdown-menu-trigger-width)]")}>
-                {UNTIL_DATES.map((date) => (
-                  <DropdownMenu.Item
-                    key={date}
-                    onSelect={() => setUntil(date)}
-                    className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
-                  >
-                    {date}
-                  </DropdownMenu.Item>
-                ))}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+            );
+          })}
         </div>
       </div>
 
-      <RateCard quote={quote} currency={account.currency} message={rateMessage} />
+      <dl className="mt-5 space-y-2.5 px-5 text-[14px]">
+        <SwapDetailRow
+          label="Rate"
+          value={rate === null ? "—" : `${formatNumber(rate)} NGN`}
+          skeletonWidth={isLive && isRatePending && !book ? 120 : undefined}
+        />
+        <SwapDetailRow
+          label="Fee"
+          value={position && quote ? `${formatNumber(position.feeUsdc)} USD (${formatPercent(quote.feeRate)})` : "—"}
+        />
+        <SwapDetailRow
+          label="You get"
+          strong={position !== null}
+          hint="Settled in cash in USD on the date you lock until: the difference between this rate and the market's then."
+          value={position ? (accountCode === "USDC" ? `₦${formatNumber(position.locked)}` : `$${formatNumber(position.locked)}`) : "—"}
+        />
+      </dl>
 
       <div className="mt-5">
-        <TradeAction session={session} label="Lock rate" disabledReason={disabledReason} isSubmitting={isSubmitting} isConfirmed={isConfirmed} status={status} />
+        <TradeAction
+          session={session}
+          label={value > 0 ? "Lock rate" : "Enter an amount"}
+          disabledReason={disabledReason}
+          isSubmitting={isSubmitting}
+          isConfirmed={isConfirmed}
+          status={status}
+          note={selected === null ? "No date is open to lock right now." : isLive && book && reference === null ? "No one is quoting this date right now." : undefined}
+        />
       </div>
     </form>
   );
@@ -424,6 +419,8 @@ const SWAP_PANEL_IDLE = "bg-[#F3EFE9] dark:bg-white/5";
 const SWAP_PANEL_ERROR = "bg-[#FBEBE7] dark:bg-[#E98A7A]/10";
 const SWAP_LABEL = "text-[14px] text-black/70 dark:text-white/70";
 const SWAP_BALANCE = "font-mono text-[12px] text-black/60 dark:text-white/60";
+const MAX_BUTTON =
+  "h-6 rounded-full bg-white px-2.5 text-[12px] font-semibold text-[#141414] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white";
 
 /** The white currency pill on a swap panel, with a menu of the accounts. */
 function TokenPicker({ label, account, onSelect }: { label: string; account: Account; onSelect: (currency: Currency) => void }) {
@@ -822,7 +819,7 @@ function ExchangeFormBody({ session, sendCall }: { session: TradeSession | null;
               <button
                 type="button"
                 onClick={() => changeAmount((Math.floor(available * 100) / 100).toFixed(2))}
-                className="h-6 rounded-full bg-white px-2.5 text-[12px] font-semibold text-[#141414] outline-none hover:bg-white/80 focus-visible:ring-2 focus-visible:ring-black/15 dark:bg-white/10 dark:text-white"
+                className={MAX_BUTTON}
               >
                 Max
               </button>
@@ -1536,6 +1533,8 @@ function ActionFromUrl({ onOpen }: { onOpen: (kind: DialogKind) => void }) {
 /** The dashboard's "Move money" button: its menu of actions, and the Lock rate and Exchange dialogs. */
 export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [dialog, setDialog] = useState<DialogKind | null>(null);
+  // Lifted so the dialog's title can name the direction.
+  const [lockFrom, setLockFrom] = useState<Currency>("USDC");
   const closeUnless = (kind: DialogKind) => (isOpen: boolean) => setDialog(isOpen ? kind : null);
 
   return (
@@ -1579,8 +1578,8 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <TradeDialog title="Lock rate" open={dialog === "lock-rate"} onOpenChange={closeUnless("lock-rate")}>
-        <WithTradeSession>{(session) => <LockRateForm session={session} />}</WithTradeSession>
+      <TradeDialog title={lockFrom === "USDC" ? "Lock USD → NGN" : "Lock NGN → USD"} wide open={dialog === "lock-rate"} onOpenChange={closeUnless("lock-rate")}>
+        <WithTradeSession>{(session) => <LockRateForm session={session} accountCode={lockFrom} onAccountChange={setLockFrom} />}</WithTradeSession>
       </TradeDialog>
       <TradeDialog title="Exchange" wide open={dialog === "exchange"} onOpenChange={closeUnless("exchange")}>
         <WithTradeSession>{(session) => <ExchangeForm session={session} />}</WithTradeSession>
