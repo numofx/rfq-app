@@ -6,6 +6,9 @@ import { EXCHANGE_TOKENS, type ExchangeCurrency } from "@/lib/zeroex";
 const balanceOfAbi = parseAbi(["function balanceOf(address owner) view returns (uint256)"]);
 const POLL_MS = 15_000;
 
+/** Wallet balances below this (about $1) are dust, not money worth pointing out: 1 USDC, 1,500 cNGN. */
+export const WALLET_DUST: Record<ExchangeCurrency, bigint> = { USDC: 1_000_000n, cNGN: 1_500_000_000n };
+
 /**
  * The wallet's own USDC and cNGN on Base, in base units: money outside the trading account, such as an
  * exchange that stopped between its steps. Null until read.

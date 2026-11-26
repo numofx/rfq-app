@@ -23,7 +23,7 @@ import { FUTURE_SYMBOL, type VenueMarket } from "@/lib/venue/market";
 import { ExchangeStopped, MIN_DEPOSIT, runExchange, type ExchangeResume, type SendCall } from "@/lib/venue/exchange";
 import { loadResume, resumeHolding, saveResume } from "@/lib/venue/exchange-resume";
 import { EXCHANGE_TOKENS, fetchZeroExQuote } from "@/lib/zeroex";
-import { useWalletTokens } from "@/lib/hooks/useWalletTokens";
+import { useWalletTokens, WALLET_DUST } from "@/lib/hooks/useWalletTokens";
 import { isFullyFilled, placeOrder, planOrder, type OrderPlan, type PlacedOrder } from "@/lib/venue/place-order";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,6 @@ const UNTIL_DATES = [
 // The only date with a listed book: cNGN-30NOV26.
 const QUOTED_UNTIL = UNTIL_DATES[0];
 // No flow behind these yet.
-const SOON_ACTIONS = ["Direct", "Request", "Transfer"];
 
 type Currency = "USDC" | "cNGN";
 type Account = (typeof ACCOUNTS)[number];
@@ -617,9 +616,6 @@ function useSendCall(wallet: TradeSession["wallet"]): SendCall {
     return walletClient.sendTransaction({ account: wallet.address as `0x${string}`, ...call, gas });
   };
 }
-
-/** Wallet balances below these are dust, not worth offering to move: about $1 either way. */
-const WALLET_DUST: Record<Currency, bigint> = { USDC: 1_000_000n, cNGN: 1_500_000_000n };
 
 /**
  * Exchanges between the trading account's balances at 0x's rate, the same routing swap.numofx.com uses. 0x
@@ -1575,14 +1571,6 @@ export function MoveMoney({ open, onOpenChange }: { open: boolean; onOpenChange:
                 className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
               >
                 {label}
-              </DropdownMenu.Item>
-            ))}
-            {SOON_ACTIONS.map((action) => (
-              <DropdownMenu.Item key={action} disabled className={cn(MENU_ITEM, "text-black/45 dark:text-white/40")}>
-                {action}
-                <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[12px] text-black/60 dark:bg-white/10 dark:text-white/60">
-                  Soon
-                </span>
               </DropdownMenu.Item>
             ))}
           </DropdownMenu.Content>
