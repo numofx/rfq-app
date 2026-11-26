@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpDown, Calendar, Check, ChevronDown, Copy, Info, Wallet, X } from "lucide-react";
 import { ACCOUNTS } from "@/components/dashboard/account-cards";
+import { CurrencyIcon } from "@/components/dashboard/currency-icon";
 import { canTrade, CONFIRMED_BUTTON, EmailVerification, TradeAction, WalletStep, WithTradeSession, type TradeSession } from "@/components/dashboard/trade-session";
 import { INITIAL_MARGIN_RATE, quoteForward, type ForwardQuote } from "@/lib/forward-quote";
 import { useForwardBook } from "@/lib/hooks/useForwardRate";
@@ -247,9 +248,9 @@ function AccountPicker({
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild>
           <button type="button" aria-labelledby={`${id} ${id}-value`} className={cn(FIELD_PILL, "pl-[9px] pr-3.5")}>
-            <Image src={account.iconSrc} alt="" width={26} height={26} className="h-[26px] w-[26px] shrink-0 rounded-full object-cover" />
+            <CurrencyIcon account={account} size={26} />
             <span id={`${id}-value`} className="min-w-0 text-left text-[14px] font-medium leading-tight text-[#141414] dark:text-white">
-              <span className="block">{account.currency}</span>
+              <span className="block">{account.fiat}</span>
               <span className={cn(AVAILABLE, "block truncate text-[12px] font-normal")}>
                 {formatAvailable(account.currency as Currency, account.symbol)} avail.
               </span>
@@ -259,17 +260,17 @@ function AccountPicker({
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="start" sideOffset={6} className={cn(MENU_CONTENT, "min-w-[var(--radix-dropdown-menu-trigger-width)]")}>
-            {ACCOUNTS.map(({ iconSrc, currency, symbol }) => (
+            {ACCOUNTS.map((option) => (
               <DropdownMenu.Item
-                key={currency}
-                onSelect={() => onSelect(currency as Currency)}
+                key={option.currency}
+                onSelect={() => onSelect(option.currency as Currency)}
                 className={cn(MENU_ITEM, "cursor-pointer data-[highlighted]:bg-black/5 dark:data-[highlighted]:bg-white/10")}
               >
                 <span className="flex items-center gap-2.5 font-medium">
-                  <Image src={iconSrc} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full object-cover" />
-                  {currency}
+                  <CurrencyIcon account={option} size={22} />
+                  {option.fiat}
                 </span>
-                <span className={cn(AVAILABLE, "text-[13px]")}>{formatAvailable(currency as Currency, symbol)} available</span>
+                <span className={cn(AVAILABLE, "text-[13px]")}>{formatAvailable(option.currency as Currency, option.symbol)} available</span>
               </DropdownMenu.Item>
             ))}
           </DropdownMenu.Content>
@@ -370,7 +371,7 @@ function LockRateForm({ session }: { session: TradeSession | null }) {
           setAmount(next);
           reset();
         }}
-        caption={isShortOfMargin && !isConfirmed ? "Not enough margin for this amount" : `Amount in ${account.currency}`}
+        caption={isShortOfMargin && !isConfirmed ? "Not enough margin for this amount" : `Amount in ${account.fiat}`}
         isError={isShortOfMargin && !isConfirmed}
       />
 
@@ -423,36 +424,6 @@ const SWAP_PANEL_IDLE = "bg-[#F3EFE9] dark:bg-white/5";
 const SWAP_PANEL_ERROR = "bg-[#FBEBE7] dark:bg-[#E98A7A]/10";
 const SWAP_LABEL = "text-[14px] text-black/70 dark:text-white/70";
 const SWAP_BALANCE = "font-mono text-[12px] text-black/60 dark:text-white/60";
-
-/**
- * The fiat currency's flag, badged with the token that holds it on chain. The badge sits in a
- * notch cut out of the flag, so whatever is behind the icon shows round it on any background.
- */
-function CurrencyIcon({ account, size }: { account: Account; size: number }) {
-  const badge = Math.round(size * 0.47); // 15px on the 32px pill flag
-  const overhang = Math.max(2, Math.round(size * 0.09)); // past the flag's bottom-right edge
-  const gap = size >= 28 ? 2 : 1.5; // the sliver of background round the badge
-  const center = size + overhang - badge / 2;
-  const hole = badge / 2 + gap;
-  const notch = `radial-gradient(circle at ${center}px ${center}px, transparent ${hole}px, #000 ${hole + 0.5}px)`;
-  return (
-    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
-      <span className="relative h-full w-full" style={{ maskImage: notch, WebkitMaskImage: notch }}>
-        <Image src={account.flagSrc} alt="" width={size} height={size} className="h-full w-full rounded-full object-cover object-center" />
-        {/* A hairline so the flag's white keeps an edge against a white pill. */}
-        <span className="absolute inset-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]" />
-      </span>
-      <Image
-        src={account.iconSrc}
-        alt=""
-        width={badge}
-        height={badge}
-        className="absolute rounded-full object-cover"
-        style={{ width: badge, height: badge, right: -overhang, bottom: -overhang }}
-      />
-    </span>
-  );
-}
 
 /** The white currency pill on a swap panel, with a menu of the accounts. */
 function TokenPicker({ label, account, onSelect }: { label: string; account: Account; onSelect: (currency: Currency) => void }) {
@@ -1309,7 +1280,7 @@ function WithdrawForm({ session, onSend }: { session: TradeSession | null; onSen
           setAmount(next);
           reset();
         }}
-        caption={exceedsBalance ? "More than your trading account holds" : `Amount in ${account.currency}`}
+        caption={exceedsBalance ? "More than your trading account holds" : `Amount in ${account.fiat}`}
         isError={exceedsBalance}
       />
 
